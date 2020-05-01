@@ -296,9 +296,9 @@ contains
     real, intent(in) :: dt_in
 
   !.. 3D variables
-    real, dimension(ims:ime, kms:kme, jms:jme), intent(in) :: p, dz
+    real, dimension(ims:ime, jms:jme, kms:kme), intent(in) :: p, dz
 
-    real, dimension(ims:ime, kms:kme, jms:jme), intent(inout) ::     &
+    real, dimension(ims:ime, jms:jme, kms:kme), intent(inout) ::     &
          th, qv, qc, qr, nr, qi1, ni1, ai1, ci1, qi2, ni2, ai2, ci2, &
          qi3, ni3, ai3, ci3,                                         &
          diag_effc3d, diag_effi3d, diag_dbz3d,                       &
@@ -351,41 +351,41 @@ contains
           do k=kts,kte       !.. k loop (vertical)
 
   !.. Thermo,rain,cloud,vapor,etc
-             TH1D(k)         =  TH(i,k,j)
-             QV1D(k)         =  QV(i,k,j)
-             QC1D(k)         =  QC(i,k,j)
-             QR1D(k)         =  QR(i,k,j)
-             NR1D(k)         =  NR(i,k,j)
-             P1D(k)          =   P(i,k,j)
-             DZ1D(k)         =  DZ(i,k,j)
+             TH1D(k)         =  TH(i,j,k)
+             QV1D(k)         =  QV(i,j,k)
+             QC1D(k)         =  QC(i,j,k)
+             QR1D(k)         =  QR(i,j,k)
+             NR1D(k)         =  NR(i,j,k)
+             P1D(k)          =   P(i,j,k)
+             DZ1D(k)         =  DZ(i,j,k)
              EFFC1D(k)       =  0.
              EFFI1D(k)       =  0.
              DBZ1D(k)        =  -35.
   !.. Planar-nucleated
-             QI1D(ICE1,k)    = QI1(i,k,j)
-             NI1D(ICE1,k)    = NI1(i,k,j)
-             AI1D(ICE1,k)    = AI1(i,k,j)
-             CI1D(ICE1,k)    = CI1(i,k,j)
+             QI1D(ICE1,k)    = QI1(i,j,k)
+             NI1D(ICE1,k)    = NI1(i,j,k)
+             AI1D(ICE1,k)    = AI1(i,j,k)
+             CI1D(ICE1,k)    = CI1(i,j,k)
              VMI1D(ICE1,k)   = 0.
              DI1D(ICE1,k)    = 0.
              RHOPO1D(ICE1,k) = 0.
              PHII1D(ICE1,k)  = 0.
              ICETYPE1D(ICE1,k) =  0.
   !.. Columnar-nucleated
-             QI1D(ICE2,k)    = QI2(i,k,j)
-             NI1D(ICE2,k)    = NI2(i,k,j)
-             AI1D(ICE2,k)    = AI2(i,k,j)
-             CI1D(ICE2,k)    = CI2(i,k,j)
+             QI1D(ICE2,k)    = QI2(i,j,k)
+             NI1D(ICE2,k)    = NI2(i,j,k)
+             AI1D(ICE2,k)    = AI2(i,j,k)
+             CI1D(ICE2,k)    = CI2(i,j,k)
              VMI1D(ICE2,k)   = 0.
              DI1D(ICE2,k)    = 0.
              RHOPO1D(ICE2,k) = 0.
              PHII1D(ICE2,k)  = 0.
              ICETYPE1D(ICE2,k) =  0.
   !.. Aggregates
-             QI1D(ICE3,k)    = QI3(i,k,j)
-             NI1D(ICE3,k)    = NI3(i,k,j)
-             AI1D(ICE3,k)    = AI3(i,k,j)
-             CI1D(ICE3,k)    = CI3(i,k,j)
+             QI1D(ICE3,k)    = QI3(i,j,k)
+             NI1D(ICE3,k)    = NI3(i,j,k)
+             AI1D(ICE3,k)    = AI3(i,j,k)
+             CI1D(ICE3,k)    = CI3(i,j,k)
              VMI1D(ICE3,k)   = 0.
              DI1D(ICE3,k)    = 0.
              RHOPO1D(ICE3,k) = 0.
@@ -401,44 +401,44 @@ contains
 
   !.. Send the 1D columns from newmicro back to WRF
           do k=kts,kte !.. k loop (vertical)
-             TH(i,k,j)     =         TH1D(k)
-             QV(i,k,j)     =         QV1D(k)       
-             QC(i,k,j)     =         QC1D(k)
-             QR(i,k,j)     =         QR1D(k)
-             NR(i,k,j)     =         NR1D(k) 
-             DIAG_EFFC3D(i,k,j)  =   max((min(EFFC1D(k),50.e-6)),2.51e-6)
-             DIAG_EFFI3D(i,k,j)  =   max((min(EFFI1D(k),999.e-6)),5.e-6)
-             DIAG_DBZ3D(i,k,j)   =   max(dbz1d(k),-35.)
+             TH(i,j,k)     =         TH1D(k)
+             QV(i,j,k)     =         QV1D(k)       
+             QC(i,j,k)     =         QC1D(k)
+             QR(i,j,k)     =         QR1D(k)
+             NR(i,j,k)     =         NR1D(k) 
+             DIAG_EFFC3D(i,j,k)  =   max((min(EFFC1D(k),50.e-6)),2.51e-6)
+             DIAG_EFFI3D(i,j,k)  =   max((min(EFFI1D(k),999.e-6)),5.e-6)
+             DIAG_DBZ3D(i,j,k)   =   max(dbz1d(k),-35.)
   !.. Planar-nucleated
-             QI1(i,k,j)    =    QI1D(ICE1,k) 
-             NI1(i,k,j)    =    NI1D(ICE1,k) 
-             AI1(i,k,j)    =    AI1D(ICE1,k) 
-             CI1(i,k,j)    =    CI1D(ICE1,k)  
-             DIAG_VMI3D_1(i,k,j)  = vmi1d(ICE1,k)
-             DIAG_DI3D_1(i,k,j)   = di1d(ICE1,k)
-             DIAG_RHOPO3D_1(i,k,j)= rhopo1d(ICE1,k)
-             DIAG_PHII3D_1(i,k,j) = phii1d(ICE1,k)
-             DIAG_ITYPE_1(i,k,j)  = icetype1d(ICE1,k)
+             QI1(i,j,k)    =    QI1D(ICE1,k) 
+             NI1(i,j,k)    =    NI1D(ICE1,k) 
+             AI1(i,j,k)    =    AI1D(ICE1,k) 
+             CI1(i,j,k)    =    CI1D(ICE1,k)  
+             DIAG_VMI3D_1(i,j,k)  = vmi1d(ICE1,k)
+             DIAG_DI3D_1(i,j,k)   = di1d(ICE1,k)
+             DIAG_RHOPO3D_1(i,j,k)= rhopo1d(ICE1,k)
+             DIAG_PHII3D_1(i,j,k) = phii1d(ICE1,k)
+             DIAG_ITYPE_1(i,j,k)  = icetype1d(ICE1,k)
   !.. Columnar-nucleated
-             QI2(i,k,j)    =    QI1D(ICE2,k) 
-             NI2(i,k,j)    =    NI1D(ICE2,k) 
-             AI2(i,k,j)    =    AI1D(ICE2,k) 
-             CI2(i,k,j)    =    CI1D(ICE2,k)  
-             DIAG_VMI3D_2(i,k,j)  = vmi1d(ICE2,k)
-             DIAG_DI3D_2(i,k,j)   = di1d(ICE2,k)
-             DIAG_RHOPO3D_2(i,k,j)= rhopo1d(ICE2,k)
-             DIAG_PHII3D_2(i,k,j) = phii1d(ICE2,k)
-             DIAG_ITYPE_2(i,k,j)  = icetype1d(ICE2,k)
+             QI2(i,j,k)    =    QI1D(ICE2,k) 
+             NI2(i,j,k)    =    NI1D(ICE2,k) 
+             AI2(i,j,k)    =    AI1D(ICE2,k) 
+             CI2(i,j,k)    =    CI1D(ICE2,k)  
+             DIAG_VMI3D_2(i,j,k)  = vmi1d(ICE2,k)
+             DIAG_DI3D_2(i,j,k)   = di1d(ICE2,k)
+             DIAG_RHOPO3D_2(i,j,k)= rhopo1d(ICE2,k)
+             DIAG_PHII3D_2(i,j,k) = phii1d(ICE2,k)
+             DIAG_ITYPE_2(i,j,k)  = icetype1d(ICE2,k)
   !.. Aggregates
-             QI3(i,k,j)    =    QI1D(ICE3,k) 
-             NI3(i,k,j)    =    NI1D(ICE3,k) 
-             AI3(i,k,j)    =    AI1D(ICE3,k) 
-             CI3(i,k,j)    =    CI1D(ICE3,k)  
-             DIAG_VMI3D_3(i,k,j)  = vmi1d(ICE3,k)
-             DIAG_DI3D_3(i,k,j)   = di1d(ICE3,k)
-             DIAG_RHOPO3D_3(i,k,j)= rhopo1d(ICE3,k)
-             DIAG_PHII3D_3(i,k,j) = phii1d(ICE3,k)
-             DIAG_ITYPE_3(i,k,j)  = icetype1d(ICE3,k)
+             QI3(i,j,k)    =    QI1D(ICE3,k) 
+             NI3(i,j,k)    =    NI1D(ICE3,k) 
+             AI3(i,j,k)    =    AI1D(ICE3,k) 
+             CI3(i,j,k)    =    CI1D(ICE3,k)  
+             DIAG_VMI3D_3(i,j,k)  = vmi1d(ICE3,k)
+             DIAG_DI3D_3(i,j,k)   = di1d(ICE3,k)
+             DIAG_RHOPO3D_3(i,j,k)= rhopo1d(ICE3,k)
+             DIAG_PHII3D_3(i,j,k) = phii1d(ICE3,k)
+             DIAG_ITYPE_3(i,j,k)  = icetype1d(ICE3,k)
           enddo
 
   !.. Accumulated precipitation and precipitation rates

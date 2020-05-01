@@ -264,11 +264,11 @@ INTEGER, PARAMETER :: MAX_ITERATIONS=10
      &                     ,ITIMESTEP,GID  ! GID gopal's doing
 
       REAL, INTENT(IN) 	    :: DT,DX,DY
-      REAL, INTENT(IN),     DIMENSION(ims:ime, kms:kme, jms:jme)::      &
+      REAL, INTENT(IN),     DIMENSION(ims:ime, jms:jme, kms:kme)::      &
      &                      dz8w,p_phy,pi_phy,rho_phy
-      REAL, INTENT(INOUT),  DIMENSION(ims:ime, kms:kme, jms:jme)::      &
+      REAL, INTENT(INOUT),  DIMENSION(ims:ime, jms:jme, kms:kme)::      &
      &                      th_phy,qv,qt,qc,qr,qi
-      REAL, INTENT(INOUT),  DIMENSION(ims:ime, kms:kme, jms:jme ) ::    &
+      REAL, INTENT(INOUT),  DIMENSION(ims:ime, jms:jme, kms:kme ) ::    &
      &                      F_ICE_PHY,F_RAIN_PHY,F_RIMEF_PHY
       REAL, INTENT(INOUT),  DIMENSION(ims:ime,jms:jme)           ::     &
      &                                                   RAINNC,RAINNCV
@@ -292,10 +292,10 @@ INTEGER, PARAMETER :: MAX_ITERATIONS=10
 !     the microphysics scheme. Instead, they will be used by Eta precip 
 !     assimilation.
 
-      REAL,  DIMENSION( ims:ime, kms:kme, jms:jme ) ::                  &
+      REAL,  DIMENSION( ims:ime, jms:jme, kms:kme ) ::                  &
      &       TLATGS_PHY,TRAIN_PHY
       REAL,  DIMENSION(ims:ime,jms:jme):: APREC,PREC,ACPREC
-      REAL,  DIMENSION(its:ite, kts:kte, jts:jte):: t_phy
+      REAL,  DIMENSION(its:ite, jts:jte, kts:kte):: t_phy
 
       INTEGER :: I,J,K,KFLIP
       REAL :: WC
@@ -355,8 +355,8 @@ INTEGER, PARAMETER :: MAX_ITERATIONS=10
       DO j = jts,jte
       DO k = kts,kte
       DO i = its,ite
-        t_phy(i,k,j) = th_phy(i,k,j)*pi_phy(i,k,j)
-        qv(i,k,j)=qv(i,k,j)/(1.+qv(i,k,j)) !Convert to specific humidity
+        t_phy(i,j,k) = th_phy(i,j,k)*pi_phy(i,j,k)
+        qv(i,j,k)=qv(i,j,k)/(1.+qv(i,j,k)) !Convert to specific humidity
       ENDDO
       ENDDO
       ENDDO
@@ -366,8 +366,8 @@ INTEGER, PARAMETER :: MAX_ITERATIONS=10
       DO j = jts,jte
       DO k = kts,kte
       DO i = its,ite
-	 TLATGS_PHY (i,k,j)=0.
-	 TRAIN_PHY  (i,k,j)=0.
+	 TLATGS_PHY (i,j,k)=0.
+	 TRAIN_PHY  (i,j,k)=0.
       ENDDO
       ENDDO
       ENDDO
@@ -385,18 +385,18 @@ INTEGER, PARAMETER :: MAX_ITERATIONS=10
       DO j = jts,jte
       DO k = kts,kte
       DO i = its,ite
-         QT(I,K,J)=QC(I,K,J)+QR(I,K,J)+QI(I,K,J)
-         IF (QI(I,K,J) <= EPSQ) THEN
-            F_ICE_PHY(I,K,J)=0.
-            F_RIMEF_PHY(I,K,J)=1.
-            IF (T_PHY(I,K,J) < T_ICEK) F_ICE_PHY(I,K,J)=1.
+         QT(I,J,K)=QC(I,J,K)+QR(I,J,K)+QI(I,J,K)
+         IF (QI(I,J,K) <= EPSQ) THEN
+            F_ICE_PHY(I,J,K)=0.
+            F_RIMEF_PHY(I,J,K)=1.
+            IF (T_PHY(I,J,K) < T_ICEK) F_ICE_PHY(I,J,K)=1.
          ELSE
-            F_ICE_PHY(I,K,J)=MAX( 0., MIN(1., QI(I,K,J)/QT(I,K,J) ) )
+            F_ICE_PHY(I,J,K)=MAX( 0., MIN(1., QI(I,J,K)/QT(I,J,K) ) )
          ENDIF
-         IF (QR(I,K,J) <= EPSQ) THEN
-            F_RAIN_PHY(I,K,J)=0.
+         IF (QR(I,J,K) <= EPSQ) THEN
+            F_RAIN_PHY(I,J,K)=0.
          ELSE
-            F_RAIN_PHY(I,K,J)=QR(I,K,J)/(QR(I,K,J)+QC(I,K,J))
+            F_RAIN_PHY(I,J,K)=QR(I,J,K)/(QR(I,J,K)+QC(I,J,K))
          ENDIF
       ENDDO
       ENDDO
@@ -416,28 +416,28 @@ INTEGER, PARAMETER :: MAX_ITERATIONS=10
      DO j = jts,jte
         DO k = kts,kte
 	DO i = its,ite
-  	   th_phy(i,k,j) = t_phy(i,k,j)/pi_phy(i,k,j)
-           qv(i,k,j)=qv(i,k,j)/(1.-qv(i,k,j))  !Convert to mixing ratio
-           WC=qt(I,K,J)
-           QI(I,K,J)=0.
-           QR(I,K,J)=0.
-           QC(I,K,J)=0.
-           IF(F_ICE_PHY(I,K,J)>=1.)THEN
-             QI(I,K,J)=WC
-           ELSEIF(F_ICE_PHY(I,K,J)<=0.)THEN
-             QC(I,K,J)=WC
+  	   th_phy(i,j,k) = t_phy(i,j,k)/pi_phy(i,j,k)
+           qv(i,j,k)=qv(i,j,k)/(1.-qv(i,j,k))  !Convert to mixing ratio
+           WC=qt(I,J,K)
+           QI(I,J,K)=0.
+           QR(I,J,K)=0.
+           QC(I,J,K)=0.
+           IF(F_ICE_PHY(I,J,K)>=1.)THEN
+             QI(I,J,K)=WC
+           ELSEIF(F_ICE_PHY(I,J,K)<=0.)THEN
+             QC(I,J,K)=WC
            ELSE
-             QI(I,K,J)=F_ICE_PHY(I,K,J)*WC
-             QC(I,K,J)=WC-QI(I,K,J)
+             QI(I,J,K)=F_ICE_PHY(I,J,K)*WC
+             QC(I,J,K)=WC-QI(I,J,K)
            ENDIF
 !
-           IF(QC(I,K,J)>0..AND.F_RAIN_PHY(I,K,J)>0.)THEN
-             IF(F_RAIN_PHY(I,K,J).GE.1.)THEN
-               QR(I,K,J)=QC(I,K,J)
-               QC(I,K,J)=0.
+           IF(QC(I,J,K)>0..AND.F_RAIN_PHY(I,J,K)>0.)THEN
+             IF(F_RAIN_PHY(I,J,K).GE.1.)THEN
+               QR(I,J,K)=QC(I,J,K)
+               QC(I,J,K)=0.
              ELSE
-               QR(I,K,J)=F_RAIN_PHY(I,K,J)*QC(I,K,J)
-               QC(I,K,J)=QC(I,K,J)-QR(I,K,J)
+               QR(I,J,K)=F_RAIN_PHY(I,J,K)*QC(I,J,K)
+               QC(I,J,K)=QC(I,J,K)-QR(I,J,K)
              ENDIF
           endif
 	ENDDO
@@ -749,10 +749,10 @@ INTEGER, PARAMETER :: MAX_ITERATIONS=10
       INTEGER, DIMENSION( ims:ime, jms:jme ),INTENT(INOUT) :: LOWLYR
       REAL,DIMENSION(ims:ime,jms:jme),INTENT(INOUT) ::                  &
      &                         APREC,PREC,ACPREC,SR
-      REAL,DIMENSION( its:ite, kts:kte, jts:jte ),INTENT(INOUT) :: t_phy
-      REAL,DIMENSION( ims:ime, kms:kme, jms:jme ),INTENT(IN) ::         &
+      REAL,DIMENSION( its:ite, jts:jte, kts:kte ),INTENT(INOUT) :: t_phy
+      REAL,DIMENSION( ims:ime, jms:jme, kms:kme ),INTENT(IN) ::         &
      &                                             dz8w,P_PHY,RHO_PHY
-      REAL,DIMENSION( ims:ime, kms:kme, jms:jme ),INTENT(INOUT) ::      &
+      REAL,DIMENSION( ims:ime, jms:jme, kms:kme ),INTENT(INOUT) ::      &
      &   CWM_PHY, F_ICE_PHY,F_RAIN_PHY,F_RIMEF_PHY,TLATGS_PHY           &
      &   ,Q_PHY,TRAIN_PHY
 !
@@ -800,15 +800,15 @@ INTEGER, PARAMETER :: MAX_ITERATIONS=10
         DO 98  I=ITS,ITE  
            DO L=KTS,KTE
              KFLIP=KTE+1-L
-             CWM(I,J,L)=CWM_PHY(I,KFLIP,J)
-             T(I,J,L)=T_PHY(I,KFLIP,J)
-             Q(I,J,L)=Q_PHY(I,KFLIP,J)
-             P(I,J,L)=P_PHY(I,KFLIP,J)
-             TLATGS(I,J,L)=TLATGS_PHY(I,KFLIP,J)
-             TRAIN(I,J,L)=TRAIN_PHY(I,KFLIP,J)
-             F_ice(L,I,J)=F_ice_PHY(I,KFLIP,J)
-             F_rain(L,I,J)=F_rain_PHY(I,KFLIP,J)
-             F_RimeF(L,I,J)=F_RimeF_PHY(I,KFLIP,J)
+             CWM(I,J,L)=CWM_PHY(I,J,KFLIP)
+             T(I,J,L)=T_PHY(I,J,KFLIP)
+             Q(I,J,L)=Q_PHY(I,J,KFLIP)
+             P(I,J,L)=P_PHY(I,J,KFLIP)
+             TLATGS(I,J,L)=TLATGS_PHY(I,J,KFLIP)
+             TRAIN(I,J,L)=TRAIN_PHY(I,J,KFLIP)
+             F_ice(L,I,J)=F_ice_PHY(I,J,KFLIP)
+             F_rain(L,I,J)=F_rain_PHY(I,J,KFLIP)
+             F_RimeF(L,I,J)=F_RimeF_PHY(I,J,KFLIP)
            ENDDO
 98      CONTINUE
      
@@ -818,7 +818,7 @@ INTEGER, PARAMETER :: MAX_ITERATIONS=10
 !
           DO K=KTS,KTE
             KFLIP=KTE+1-K
-            DPCOL(K)=RHO_PHY(I,KFLIP,J)*GRAV*dz8w(I,KFLIP,J)
+            DPCOL(K)=RHO_PHY(I,J,KFLIP)*GRAV*dz8w(I,J,KFLIP)
           ENDDO
 !   
    !
@@ -991,14 +991,14 @@ ENDIF
         DO 101 I=ITS,ITE  
            DO L=KTS,KTE
               KFLIP=KTE+1-L
-             CWM_PHY(I,KFLIP,J)=CWM(I,J,L)
-             T_PHY(I,KFLIP,J)=T(I,J,L)
-             Q_PHY(I,KFLIP,J)=Q(I,J,L)
-             TLATGS_PHY(I,KFLIP,J)=TLATGS(I,J,L)
-             TRAIN_PHY(I,KFLIP,J)=TRAIN(I,J,L)
-             F_ice_PHY(I,KFLIP,J)=F_ice(L,I,J)
-             F_rain_PHY(I,KFLIP,J)=F_rain(L,I,J)
-             F_RimeF_PHY(I,KFLIP,J)=F_RimeF(L,I,J)
+             CWM_PHY(I,J,KFLIP)=CWM(I,J,L)
+             T_PHY(I,J,KFLIP)=T(I,J,L)
+             Q_PHY(I,J,KFLIP)=Q(I,J,L)
+             TLATGS_PHY(I,J,KFLIP)=TLATGS(I,J,L)
+             TRAIN_PHY(I,J,KFLIP)=TRAIN(I,J,L)
+             F_ice_PHY(I,J,KFLIP)=F_ice(L,I,J)
+             F_rain_PHY(I,J,KFLIP)=F_rain(L,I,J)
+             F_RimeF_PHY(I,J,KFLIP)=F_RimeF(L,I,J)
            ENDDO
 101     CONTINUE
 !
@@ -2882,7 +2882,7 @@ ENDIF
       real, INTENT(IN) ::  DELX,DELY
 !HWRF      real,DIMENSION(*), INTENT(INOUT) :: MP_RESTART_STATE
 !HWRF      real,DIMENSION(NX), INTENT(INOUT) :: TBPVS_STATE,TBPVS0_STATE
-      real,DIMENSION(ims:ime, kms:kme, jms:jme),INTENT(OUT),OPTIONAL :: &
+      real,DIMENSION(ims:ime, jms:jme, kms:kme),INTENT(OUT),OPTIONAL :: &
      &  F_ICE_PHY,F_RAIN_PHY,F_RIMEF_PHY
       real,INTENT(IN) :: DT,GSMDT
       LOGICAL,INTENT(IN) :: allowed_to_read,restart
@@ -2914,9 +2914,9 @@ ENDIF
         DO J = jts,jte
         DO K = kts,kte
         DO I= its,ite
-          F_ICE_PHY(i,k,j)=0.
-          F_RAIN_PHY(i,k,j)=0.
-          F_RIMEF_PHY(i,k,j)=1.
+          F_ICE_PHY(i,j,k)=0.
+          F_RAIN_PHY(i,j,k)=0.
+          F_RIMEF_PHY(i,j,k)=1.
         ENDDO
         ENDDO
         ENDDO

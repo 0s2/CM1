@@ -84,7 +84,7 @@ CONTAINS
   INTEGER,      INTENT(IN   )    ::   ids,ide, jds,jde, kds,kde , &
                                       ims,ime, jms,jme, kms,kme , &
                                       its,ite, jts,jte, kts,kte
-  REAL, DIMENSION( ims:ime , kms:kme , jms:jme ),                 &
+  REAL, DIMENSION( ims:ime , jms:jme , kms:kme ),                 &
         INTENT(INOUT) ::                                          &
                                                              th,  &
                                                               q,  &
@@ -93,7 +93,7 @@ CONTAINS
                                                               qr, &
                                                               qs, &
                                                               qg
-  REAL, DIMENSION( ims:ime , kms:kme , jms:jme ),                 &
+  REAL, DIMENSION( ims:ime , jms:jme , kms:kme ),                 &
         INTENT(IN   ) ::                                          &
                                                              den, &
                                                              pii, &
@@ -126,13 +126,13 @@ CONTAINS
                                                         has_reqc, &
                                                         has_reqi, &
                                                         has_reqs
-  REAL, DIMENSION(ims:ime, kms:kme, jms:jme),                     &
+  REAL, DIMENSION(ims:ime, jms:jme, kms:kme),                     &
         INTENT(INOUT)::                                           &
                                                         re_cloud, &
                                                           re_ice, &
                                                          re_snow
 !+---+-----------------------------------------------------------------+
-  REAL, DIMENSION(ims:ime, kms:kme, jms:jme), OPTIONAL,           &   ! GT
+  REAL, DIMENSION(ims:ime, jms:jme, kms:kme), OPTIONAL,           &   ! GT
         INTENT(INOUT) ::                               refl_10cm
 !+---+-----------------------------------------------------------------+
 
@@ -144,7 +144,7 @@ CONTAINS
                                                       graupelncv
 
 #ifdef WRF_CHEM
-  REAL, DIMENSION( ims:ime , kms:kme, jms:jme ), INTENT(INOUT) :: &
+  REAL, DIMENSION( ims:ime , jms:jme, kms:kme ), INTENT(INOUT) :: &
                                                       rainprod,   &
                                                       evapprod
 ! local variable
@@ -155,6 +155,7 @@ CONTAINS
 
 ! LOCAL VAR
   REAL, DIMENSION( its:ite , kts:kte ) ::   t
+  REAL, DIMENSION( ims:ime , kms:kme ) ::   q2,den2,p2,delz2
   REAL, DIMENSION( its:ite , kts:kte, 2 ) ::   qci
   REAL, DIMENSION( its:ite , kts:kte, 3 ) ::   qrs
   INTEGER ::               i,j,k
@@ -173,19 +174,23 @@ CONTAINS
       DO j=jts,jte
          DO k=kts,kte
          DO i=its,ite
-            t(i,k)=th(i,k,j)*pii(i,k,j)
-            qci(i,k,1) = qc(i,k,j)
-            qci(i,k,2) = qi(i,k,j)
-            qrs(i,k,1) = qr(i,k,j)
-            qrs(i,k,2) = qs(i,k,j)
-            qrs(i,k,3) = qg(i,k,j)
+            t(i,k)=th(i,j,k)*pii(i,j,k)
+            qci(i,k,1) = qc(i,j,k)
+            qci(i,k,2) = qi(i,j,k)
+            qrs(i,k,1) = qr(i,j,k)
+            qrs(i,k,2) = qs(i,j,k)
+            qrs(i,k,3) = qg(i,j,k)
+            q2(i,k) = q(i,j,k)
+            p2(i,k) = p(i,j,k)
+            delz2(i,k) = delz(i,j,k)
+            den2(i,k) = den(i,j,k)
          ENDDO
          ENDDO
          !  Sending array starting locations of optional variables may cause
          !  troubles, so we explicitly change the call.
-         CALL wsm62D(t, q(ims,kms,j), qci, qrs                     &
-                    ,den(ims,kms,j)                                &
-                    ,p(ims,kms,j), delz(ims,kms,j)                 &
+         CALL wsm62D(t, q2, qci, qrs                               &
+                    ,den2                                          &
+                    ,p2, delz2                                     &
                     ,delt,g, cpd, cpv, rd, rv, t0c                 &
                     ,ep1, ep2, qmin                                &
                     ,XLS, XLV0, XLF0, den0, denr                   &
@@ -204,12 +209,13 @@ CONTAINS
                                                                    )
          DO K=kts,kte
          DO I=its,ite
-            th(i,k,j)=t(i,k)/pii(i,k,j)
-            qc(i,k,j) = qci(i,k,1)
-            qi(i,k,j) = qci(i,k,2)
-            qr(i,k,j) = qrs(i,k,1)
-            qs(i,k,j) = qrs(i,k,2)
-            qg(i,k,j) = qrs(i,k,3)
+            th(i,j,k)=t(i,k)/pii(i,j,k)
+            qc(i,j,k) = qci(i,k,1)
+            qi(i,j,k) = qci(i,k,2)
+            qr(i,j,k) = qrs(i,k,1)
+            qs(i,j,k) = qrs(i,k,2)
+            qg(i,j,k) = qrs(i,k,3)
+            q(i,j,k) = q2(i,k)
          ENDDO
          ENDDO
 
@@ -218,17 +224,17 @@ CONTAINS
          if (diagflag .and. do_radar_ref == 1) then
             DO I=its,ite
                DO K=kts,kte
-                  t1d(k)=th(i,k,j)*pii(i,k,j)
-                  p1d(k)=p(i,k,j)
-                  qv1d(k)=q(i,k,j)
-                  qr1d(k)=qr(i,k,j)
-                  qs1d(k)=qs(i,k,j)
-                  qg1d(k)=qg(i,k,j)
+                  t1d(k)=th(i,j,k)*pii(i,j,k)
+                  p1d(k)=p(i,j,k)
+                  qv1d(k)=q(i,j,k)
+                  qr1d(k)=qr(i,j,k)
+                  qs1d(k)=qs(i,j,k)
+                  qg1d(k)=qg(i,j,k)
                ENDDO
                call refl10cm_wsm6 (qv1d, qr1d, qs1d, qg1d,              &
                        t1d, p1d, dBZ, kts, kte, i, j)
                do k = kts, kte
-                  refl_10cm(i,k,j) = MAX(-35., dBZ(k))
+                  refl_10cm(i,j,k) = MAX(-35., dBZ(k))
                enddo
             ENDDO
          endif
@@ -241,19 +247,19 @@ CONTAINS
               re_qi(k) = 10.01E-6
               re_qs(k) = 25.E-6
 
-              t1d(k)  = th(i,k,j)*pii(i,k,j)
-              den1d(k)= den(i,k,j)
-              qc1d(k) = qc(i,k,j)
-              qi1d(k) = qi(i,k,j)
-              qs1d(k) = qs(i,k,j)
+              t1d(k)  = th(i,j,k)*pii(i,j,k)
+              den1d(k)= den(i,j,k)
+              qc1d(k) = qc(i,j,k)
+              qi1d(k) = qi(i,j,k)
+              qs1d(k) = qs(i,j,k)
             enddo
             call effectRad_wsm6(t1d, qc1d, qi1d, qs1d, den1d,           &
                                 qmin, t0c, re_qc, re_qi, re_qs,         &
                                 kts, kte, i, j)
             do k=kts,kte
-              re_cloud(i,k,j) = MAX(2.51E-6,  MIN(re_qc(k),  50.E-6))
-              re_ice(i,k,j)   = MAX(10.01E-6, MIN(re_qi(k), 125.E-6))
-              re_snow(i,k,j)  = MAX(25.E-6,   MIN(re_qs(k), 999.E-6))
+              re_cloud(i,j,k) = MAX(2.51E-6,  MIN(re_qc(k),  50.E-6))
+              re_ice(i,j,k)   = MAX(10.01E-6, MIN(re_qi(k), 125.E-6))
+              re_snow(i,j,k)  = MAX(25.E-6,   MIN(re_qs(k), 999.E-6))
             enddo 
           enddo   
         endif     ! has_reqc, etc...
@@ -261,8 +267,8 @@ CONTAINS
 #ifdef WRF_CHEM
         do i=its,ite
           do k=kts,kte
-            rainprod(i,k,j) = rainprod2d(i,k)
-            evapprod(i,k,j) = evapprod2d(i,k)
+            rainprod(i,j,k) = rainprod2d(i,k)
+            evapprod(i,j,k) = evapprod2d(i,k)
           enddo
         enddo
 #endif
