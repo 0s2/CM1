@@ -36,7 +36,7 @@
       real :: dt,dtlast,rtime
       double precision :: adt,acfl
       logical, dimension(maxq) :: cloudvar
-      character(len=3), dimension(maxq) :: qname
+      character(len=4), dimension(maxq) :: qname
       character(len=6), dimension(maxq) :: budname
       double precision, dimension(nbudget) :: qbudget
       double precision, dimension(numq) :: asq,bsq
@@ -644,7 +644,7 @@
       implicit none
 
       character(len=40), intent(inout), dimension(maxvars) :: name_stat,desc_stat,unit_stat
-      character(len=3), intent(in), dimension(maxq) :: qname
+      character(len=4), intent(in), dimension(maxq) :: qname
       character(len=20), intent(in), dimension(maxq) :: qunit
       character(len=6), intent(in), dimension(maxq) :: budname
 

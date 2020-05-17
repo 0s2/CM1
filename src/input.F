@@ -72,7 +72,7 @@
               ibzvd,iezvd,jbzvd,jezvd,kbzvd,kezvd,nqzvd,                      &
               imirror,jmirror,                                                &
               imp,jmp,kmp,kmt,rmp,cmp,nrain,                                  &
-              numq,nqv,nqc,nqr,nqi,nqs,nqg,nnci,nncc,                         &
+              numq,nqv,nqc,nqr,nqi,nqs,nqg,nnci,nncc,num_cat,                 &
               prx,pry,prz,pru,prv,prw,prth,prt,prprs,                         &
               prpt1,prpt2,prqv,prq1,prq2,prnc1,prnc2,prkm,prkh,prtke,         &
               prdbz,prb,prvpg,przv,prrho,prqsl,prqsi,prznt,prust,przs,prsig,  &
@@ -107,7 +107,7 @@
               output_qv,output_qvpert,output_q,output_dbz,output_buoyancy,    &
               output_u,output_upert,output_uinterp,                           &
               output_v,output_vpert,output_vinterp,output_w,output_winterp,   &
-              output_vort,output_pv,output_uh,output_pblten,                  &
+              output_vel,output_vort,output_pv,output_uh,output_pblten,       &
               output_dissten,output_fallvel,output_nm,output_def,             &
               output_radten,output_cape,output_cin,output_lcl,output_lfc,     &
               output_pwat,output_lwp,                                         &
@@ -145,7 +145,7 @@
               ud_hidiff,ud_vidiff,ud_hediff,ud_vediff,                        &
               vd_hidiff,vd_vidiff,vd_hediff,vd_vediff,                        &
               wd_hidiff,wd_vidiff,wd_hediff,wd_vediff,                        &
-              iusekm,iusekh,nzeta
+              iusekm,iusekh,nzeta,cltkopt,grdtrns,radarx,radary
 
 !-----------------------------------------------------------------------
 
@@ -174,7 +174,8 @@
            wbe1,wbe2,wbe3,wte1,wte2,wte3,                                     &
            csound,hurr_rad,                                                   &
            cnst_znt,cnst_shflx,cnst_lhflx,cnst_ust,                           &
-           ddr,rlen,centerx,centery
+           ddr,rlen,centerx,centery,tceltrk,tcrestr,chkdpth,twindow,rngmin,   &
+           rngmax,thdbz,xgrdorg,ygrdorg
 
 !-----------------------------------------------------------------------
 
@@ -222,6 +223,8 @@
       namelist /param5/ stretch_y,dy_inner,dy_outer,nos_y_len,tot_y_len
       namelist /param6/ stretch_z,ztop,str_bot,str_top,dz_bot,dz_top
       namelist /param7/ bc_temp,ptc_top,ptc_bot,viscosity,pr_num
+      namelist /param18/ cltkopt,tceltrk,tcrestr,grdtrns,chkdpth,twindow
+      namelist /param17/ radarx,radary,rngmin,rngmax,thdbz
       namelist /param8/ var1,var2,var3,var4,var5,var6,var7,var8,var9,var10
       namelist /param9/                                                       &
               output_path,output_basename,output_format,output_filetype,      &
@@ -236,7 +239,7 @@
               output_qv,output_qvpert,output_q,output_dbz,output_buoyancy,    &
               output_u,output_upert,output_uinterp,                           &
               output_v,output_vpert,output_vinterp,output_w,output_winterp,   &
-              output_vort,output_pv,output_uh,output_pblten,                  &
+              output_vel,output_vort,output_pv,output_uh,output_pblten,       &
               output_dissten,output_fallvel,output_nm,output_def,             &
               output_radten,output_cape,output_cin,output_lcl,output_lfc,     &
               output_pwat,output_lwp,                                         &

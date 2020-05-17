@@ -30,6 +30,10 @@
       use mpi
 #endif
       use module_mp_thompson , only : thompson_init
+      use module_mp_fer_hires , only : fer_hires_init
+      use module_mp_wsm6 , only : wsm6init
+      use module_mp_p3 , only : p3_init
+      use module_mp_jensen_ishmael , only : jensen_ishmael_init
       use module_mp_graupel
       use module_mp_nssl_2mom, only:    &
                         nssl_2mom_init, &
@@ -60,7 +64,7 @@
       real :: dt,dtlast
       double precision :: stattim,taptim,rsttim,radtim,prcltim
       logical, dimension(maxq) :: cloudvar,rhovar
-      character(len=3), dimension(maxq) :: qname
+      character(len=4), dimension(maxq) :: qname
       character(len=20), dimension(maxq) :: qunit
       character(len=6), dimension(maxq) :: budname
       real, dimension(ib:ie) :: xh,rxh,arh1,arh2,uh,ruh
@@ -187,6 +191,8 @@
       read(20,nml=param5)
       read(20,nml=param6)
       read(20,nml=param7)
+      read(20,nml=param18)
+      read(20,nml=param17)
       read(20,nml=param8)
       read(20,nml=param9)
       read(20,nml=param16)
@@ -1253,13 +1259,14 @@
       ENDIF
       !-----
       IF(imoist.eq.1.and.output_dbz.eq.1.and.ptype.ne.2.and.ptype.ne.3.and.ptype.ne.5  &
-          .and. (.not. ptype.ge.26))then
+          .and.ptype.ne.7.and.ptype.ne.8.and.ptype.ne.9.and.ptype.ne.10.and.ptype.ne.11 &
+          .and.ptype.ne.12.and.ptype.ne.13.and.ptype.ne.14 .and. (.not. ptype.ge.26))then
         if(myid.eq.0)then
         print *
         print *,'  ptype      = ',ptype
         print *,'  output_dbz = ',output_dbz
         print *
-        print *,'  output_dbz is only available for ptype=2,3,5,26,27,28'
+        print *,'  output_dbz is only available for ptype=2,3,5,7,8,9,10,11,12,13,14,26,27,28'
         print *
         endif
         IF(ptype.eq.4)THEN
@@ -1946,13 +1953,13 @@
         call stopcm1
       ENDIF
       !-----
-      IF( radopt.eq.2 .and. ( ptype.ne.3 .and. ptype.ne.5 )  )THEN
+      IF( radopt.eq.2 .and. ( ptype.ne.3 .and. ptype.ne.5 .and. ptype.ne.8 .and. ptype.ne.10 .and. ptype.ne.11 .and. ptype.ne.12)  )THEN
         if(myid.eq.0)then
         print *
         print *,'  radopt   = ',radopt
         print *,'  ptype    = ',ptype
         print *
-        print *,'  radopt=2 requires ptype=3,5 (for now) '
+        print *,'  radopt=2 requires ptype=3,5,8,10,11,12 (for now) '
         print *
         print *,'   stopping model .... '
         print *
@@ -2434,6 +2441,19 @@
       if(dowr) write(outfile,*) 'ptc_bot   =',ptc_bot
       if(dowr) write(outfile,*) 'viscosity =',viscosity
       if(dowr) write(outfile,*) 'pr_num    =',pr_num
+      if(dowr) write(outfile,*)
+      if(dowr) write(outfile,*) 'cltkopt   =',cltkopt
+      if(dowr) write(outfile,*) 'tceltrk   =',tceltrk
+      if(dowr) write(outfile,*) 'tcrestr   =',tcrestr
+      if(dowr) write(outfile,*) 'grdtrns   =',grdtrns
+      if(dowr) write(outfile,*) 'chkdpth   =',chkdpth
+      if(dowr) write(outfile,*) 'twindow   =',twindow
+      if(dowr) write(outfile,*)
+      if(dowr) write(outfile,*) 'radarx    =',radarx
+      if(dowr) write(outfile,*) 'radary    =',radary
+      if(dowr) write(outfile,*) 'rngmin    =',rngmin
+      if(dowr) write(outfile,*) 'rngmax    =',rngmax
+      if(dowr) write(outfile,*) 'thdbz     =',thdbz
       if(dowr) write(outfile,*)
       if(dowr) write(outfile,*) 'var1      =',var1
       if(dowr) write(outfile,*) 'var2      =',var2
@@ -2975,26 +2995,389 @@
 !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 !-----------------------------------------------------------------------
 
-        ELSEIF(ptype.eq.8)THEN        ! Jensen_AHAB
+        ELSEIF(ptype.eq.7)THEN        ! Ferrier
 
-          stop 12329
-
-          !----- initialize the Jensen_AHAB scheme -----
+          !----- initialize the Ferrier scheme -----
 
           if(dowr) write(outfile,*)
-          if(dowr) write(outfile,*) 'Calling jensen_ahab_init '
+          if(dowr) write(outfile,*) 'Calling fer_hires_init '
 
-!!!          call jensen_ahab_init
+          call fer_hires_init(0.0,dt,dx,dy,irst,.true.,                 &
+                ids=1,  ide=ni+1, jds=1,  jde=nj+1, kds=1,  kde=nk+1,   &
+                ims=ib, ime=ie,   jms=jb, jme=je,   kms=kb, kme=ke,     &
+                its=1,  ite=ni,   jts=1,  jte=nj,   kts=1,  kte=nk)
 
-          if(dowr) write(outfile,*) 'Returned from jensen_ahab_init '
+          if(dowr) write(outfile,*) 'Returned from fer_hires_init '
+          if(dowr) write(outfile,*)
+
+          !------------------------------------------
+
+          iice = 1    ! this means that ptype=7 is an ice scheme
+
+          numq = 5    ! there are 5 q variables
+
+          nqv  = 1    ! qv is the first array
+          nql1 = 2    ! the first liquid variable
+          nql2 = 3    ! the last liquid variable
+          nqs1 = 4    ! the first solid variable
+          nqs2 = 5    ! the last solid variable
+
+          cloudvar(1) = .false.
+          cloudvar(2) = .true.
+          cloudvar(3) = .false.
+          cloudvar(4) = .true.
+          cloudvar(5) = .false.
+
+          qname(1) = 'qv'
+          qname(2) = 'qc'
+          qname(3) = 'qr'
+          qname(4) = 'qi'
+          qname(5) = 'qt'
+
+          qunit(1) = 'kg/kg'
+          qunit(2) = 'kg/kg'
+          qunit(3) = 'kg/kg'
+          qunit(4) = 'kg/kg'
+          qunit(5) = 'kg/kg'
+
+          !----- budget stuff below here -----
+
+          nbudget = 0
+
+          budrain = 0
+
+          if(dowr) write(outfile,*)
+          if(dowr) write(outfile,*) ' ------------------------------------------ '
+          if(dowr) write(outfile,*) '  ... using Ferrier microphysics scheme ... '
+          if(dowr) write(outfile,*) '         numq   = ',numq
+          if(dowr) write(outfile,*) ' ------------------------------------------ '
+          if(dowr) write(outfile,*)
+
+!-----------------------------------------------------------------------
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!-----------------------------------------------------------------------
+
+        ELSEIF(ptype.eq.8)THEN        ! WSM6
+
+          !----- initialize the WSM6 scheme -----
+
+          if(dowr) write(outfile,*)
+          if(dowr) write(outfile,*) 'Calling wsm6init '
+
+          call wsm6init(rhoair0,rhowater,rhosnow,cpl,cpv,ihail,.true.)
+
+          if(dowr) write(outfile,*) 'Returned from wsm6init '
           if(dowr) write(outfile,*)
 
           !------------------------------------------
 
           iice = 1    ! this means that ptype=8 is an ice scheme
-          idm  = 1    ! this means that ptype=8 has at least one double moment
 
-          numq = 16   ! there are 10 q variables
+          numq = 6    ! there are 6 q variables
+
+          nqv  = 1    ! qv is the first array
+          nql1 = 2    ! the first liquid variable
+          nql2 = 3    ! the last liquid variable
+          nqs1 = 4    ! the first solid variable
+          nqs2 = 6    ! the last solid variable
+
+          cloudvar(1) = .false.
+          cloudvar(2) = .true.
+          cloudvar(3) = .false.
+          cloudvar(4) = .true.
+          cloudvar(5) = .false.
+          cloudvar(6) = .false.
+
+          qname(1) = 'qv'
+          qname(2) = 'qc'
+          qname(3) = 'qr'
+          qname(4) = 'qi'
+          qname(5) = 'qs'
+          qname(6) = 'qg'
+
+          qunit(1) = 'kg/kg'
+          qunit(2) = 'kg/kg'
+          qunit(3) = 'kg/kg'
+          qunit(4) = 'kg/kg'
+          qunit(5) = 'kg/kg'
+          qunit(6) = 'kg/kg'
+
+          !----- budget stuff below here -----
+
+          nbudget = 0
+
+          budrain = 0
+
+          if(dowr) write(outfile,*)
+          if(dowr) write(outfile,*) ' --------------------------------------- '
+          if(dowr) write(outfile,*) '  ... using WSM6 microphysics scheme ... '
+          if(dowr) write(outfile,*) '         numq   = ',numq
+          if(dowr) write(outfile,*) ' --------------------------------------- '
+          if(dowr) write(outfile,*)
+
+!-----------------------------------------------------------------------
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!-----------------------------------------------------------------------
+
+        ELSEIF(ptype.eq.9)THEN        ! Milbrandt-Yau
+
+          !----- initialize the Milbrandt-Yau scheme -----
+
+          iice = 1    ! this means that ptype=9 is an ice scheme
+          idm  = 1    ! this means that ptype=9 has at least one double moment
+
+          numq = 13   ! there are 13 q variables
+
+          nqv  = 1    ! qv is the first array
+          nql1 = 2    ! the first liquid variable
+          nql2 = 3    ! the last liquid variable
+          nqs1 = 4    ! the first solid variable
+          nqs2 = 7    ! the last solid variable
+          nnc1 = 8    ! the first number concentration var is the seventh array
+          nnc2 = 13   ! the last number concentration var is the eighth array
+
+          cloudvar( 1) = .false.
+          cloudvar( 2) = .true.
+          cloudvar( 3) = .false.
+          cloudvar( 4) = .true.
+          cloudvar( 5) = .false.
+          cloudvar( 6) = .false.
+          cloudvar( 7) = .false.
+          cloudvar( 8) = .false.
+          cloudvar( 9) = .false.
+          cloudvar(10) = .false.
+          cloudvar(11) = .false.
+          cloudvar(12) = .false.
+          cloudvar(13) = .false.
+
+          qname( 1) = 'qv '
+          qname( 2) = 'qc '
+          qname( 3) = 'qr '
+          qname( 4) = 'qi '
+          qname( 5) = 'qs '
+          qname( 6) = 'qg '
+          qname( 7) = 'qh '
+          qname( 8) = 'ncc'
+          qname( 9) = 'ncr'
+          qname(10) = 'nci'
+          qname(11) = 'ncs'
+          qname(12) = 'ncg'
+          qname(13) = 'nch'
+
+          qunit( 1) = 'kg/kg'
+          qunit( 2) = 'kg/kg'
+          qunit( 3) = 'kg/kg'
+          qunit( 4) = 'kg/kg'
+          qunit( 5) = 'kg/kg'
+          qunit( 6) = 'kg/kg'
+          qunit( 7) = 'kg/kg'
+          qunit( 8) = '#/kg'
+          qunit( 9) = '#/kg'
+          qunit(10) = '#/kg'
+          qunit(11) = '#/kg'
+          qunit(12) = '#/kg'
+          qunit(13) = '#/kg'
+
+
+          !----- budget stuff below here -----
+
+          nbudget = 0
+
+          budrain = 0
+
+          if(dowr) write(outfile,*)
+          if(dowr) write(outfile,*) ' ------------------------------------------------ '
+          if(dowr) write(outfile,*) '  ... using Milbrandt-Yau microphysics scheme ... '
+          if(dowr) write(outfile,*) '         numq   = ',numq
+          if(dowr) write(outfile,*) ' ------------------------------------------------ '
+          if(dowr) write(outfile,*)
+
+!-----------------------------------------------------------------------
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!-----------------------------------------------------------------------
+
+        ELSEIF(ptype.eq.10)THEN        ! P3 1-category
+
+          !----- initialize the P3 scheme -----
+
+          if(dowr) write(outfile,*)
+          if(dowr) write(outfile,*) 'Calling p3_init '
+
+          call p3_init('.',1,'CM1',ierr,.false.)
+
+          if(dowr) write(outfile,*) 'Returned from p3_init '
+          if(dowr) write(outfile,*)
+
+          !------------------------------------------
+
+          iice = 1    ! this means that ptype=10 is an ice scheme
+          idm  = 1    ! this means that ptype=10 has at least one double moment
+
+          numq = 9    ! there are 9 q variables
+
+          nqv  = 1    ! qv is the first array
+          nql1 = 2    ! the first liquid variable
+          nql2 = 3    ! the last liquid variable
+          nqs1 = 4    ! the first solid variable
+          nqs2 = 5    ! the last solid variable
+          nnc1 = 6    ! the first number concentration var
+          nnc2 = 9    ! the last number concentration var
+
+          cloudvar(1) = .false.
+          cloudvar(2) = .true.
+          cloudvar(3) = .false.
+          cloudvar(4) = .true.
+          cloudvar(5) = .false.
+          cloudvar(6) = .false.
+          cloudvar(7) = .false.
+          cloudvar(8) = .false.
+          cloudvar(9) = .false.
+
+          qname(1) = 'qv '
+          qname(2) = 'qc '
+          qname(3) = 'qr '
+          qname(4) = 'qi '
+          qname(5) = 'qir'
+          qname(6) = 'ncc'
+          qname(7) = 'ncr'
+          qname(8) = 'nci'
+          qname(9) = 'qib'
+
+          qunit(1) = 'kg/kg'
+          qunit(2) = 'kg/kg'
+          qunit(3) = 'kg/kg'
+          qunit(4) = 'kg/kg'
+          qunit(5) = 'kg/kg'
+          qunit(6) = '#/kg'
+          qunit(7) = '#/kg'
+          qunit(8) = '#/kg'
+          qunit(9) = 'm^3/kg'
+
+          num_cat = 1    ! number of ice categories (for diagnostic output)
+
+          !----- budget stuff below here -----
+
+          nbudget = 0
+
+          budrain = 0
+
+          if(dowr) write(outfile,*)
+          if(dowr) write(outfile,*) ' ------------------------------------------------ '
+          if(dowr) write(outfile,*) '  ... using P3 1-category microphysics scheme ... '
+          if(dowr) write(outfile,*) '         numq   = ',numq
+          if(dowr) write(outfile,*) ' ------------------------------------------------ '
+          if(dowr) write(outfile,*)
+
+!-----------------------------------------------------------------------
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!-----------------------------------------------------------------------
+
+        ELSEIF(ptype.eq.11)THEN        ! P3 2-category
+
+          !----- initialize the P3 scheme -----
+
+          if(dowr) write(outfile,*)
+          if(dowr) write(outfile,*) 'Calling p3_init '
+
+          call p3_init('.',2,'CM1',ierr,.false.)
+
+          if(dowr) write(outfile,*) 'Returned from p3_init '
+          if(dowr) write(outfile,*)
+
+          !------------------------------------------
+
+          iice = 1    ! this means that ptype=11 is an ice scheme
+          idm  = 1    ! this means that ptype=11 has at least one double moment
+
+          numq = 13   ! there are 13 q variables
+
+          nqv  = 1    ! qv is the first array
+          nql1 = 2    ! the first liquid variable
+          nql2 = 3    ! the last liquid variable
+          nqs1 = 4    ! the first solid variable
+          nqs2 = 7    ! the last solid variable
+          nnc1 = 8    ! the first number concentration var
+          nnc2 = 13   ! the last number concentration var
+
+          cloudvar( 1) = .false.
+          cloudvar( 2) = .true.
+          cloudvar( 3) = .false.
+          cloudvar( 4) = .true.
+          cloudvar( 5) = .true.
+          cloudvar( 6) = .false.
+          cloudvar( 7) = .false.
+          cloudvar( 8) = .false.
+          cloudvar( 9) = .false.
+          cloudvar(10) = .false.
+          cloudvar(11) = .false.
+          cloudvar(12) = .false.
+          cloudvar(13) = .false.
+
+          qname( 1) = 'qv  '
+          qname( 2) = 'qc  '
+          qname( 3) = 'qr  '
+          qname( 4) = 'qi1 '
+          qname( 5) = 'qi2 '
+          qname( 6) = 'qir1'
+          qname( 7) = 'qir2'
+          qname( 8) = 'ncc '
+          qname( 9) = 'ncr '
+          qname(10) = 'nci1'
+          qname(11) = 'nci2'
+          qname(12) = 'qib1'
+          qname(13) = 'qib2'
+
+          qunit( 1) = 'kg/kg'
+          qunit( 2) = 'kg/kg'
+          qunit( 3) = 'kg/kg'
+          qunit( 4) = 'kg/kg'
+          qunit( 5) = 'kg/kg'
+          qunit( 6) = 'kg/kg'
+          qunit( 7) = 'kg/kg'
+          qunit( 8) = 'kg/kg'
+          qunit( 9) = 'kg/kg'
+          qunit(10) = 'kg/kg'
+          qunit(11) = 'kg/kg'
+          qunit(12) = 'kg/kg'
+          qunit(13) = 'kg/kg'
+
+          num_cat = 2    ! number of ice categories (for diagnostic output)
+
+          !----- budget stuff below here -----
+
+          nbudget = 0
+
+          budrain = 0
+
+          if(dowr) write(outfile,*)
+          if(dowr) write(outfile,*) ' ------------------------------------------------ '
+          if(dowr) write(outfile,*) '  ... using P3 2-category microphysics scheme ... '
+          if(dowr) write(outfile,*) '         numq   = ',numq
+          if(dowr) write(outfile,*) ' ------------------------------------------------ '
+          if(dowr) write(outfile,*)
+
+!-----------------------------------------------------------------------
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!-----------------------------------------------------------------------
+
+        ELSEIF(ptype.eq.12)THEN        ! Jensen_ISHMAEL
+
+          !----- initialize the Jensen_ISHMAEL scheme -----
+
+          if(dowr) write(outfile,*)
+          if(dowr) write(outfile,*) 'Calling jensen_ishmael_init '
+
+          call jensen_ishmael_init
+
+          if(dowr) write(outfile,*) 'Returned from jensen_ishmael_init '
+          if(dowr) write(outfile,*)
+
+          !------------------------------------------
+
+          iice = 1    ! this means that ptype=12 is an ice scheme
+          idm  = 1    ! this means that ptype=12 has at least one double moment
+
+          numq = 16   ! there are 16 q variables
 
           nqv  = 1    ! qv is the first array
           nql1 = 2    ! the first liquid variable
@@ -3055,35 +3438,75 @@
           qunit(15) = 'm^3/kg'
           qunit(16) = 'm^3/kg'
 
+          num_cat = 3    ! number of ice categories (for diagnostic output)
+
           !----- budget stuff below here -----
 
-          nbudget = 10
+          nbudget = 0
 
-          budname(1) = 'tcond '
-          budname(2) = 'tevac '
-          budname(3) = 'tauto '
-          budname(4) = 'taccr '
-          budname(5) = 'tevar '
-          budname(6) = 'train '
-          budname(7) = 'erain '
-          budname(8) = 'qsfc  '
-          budname(9) = 'esfc  '
-          budname(10) = 'erad  '
-
-          budrain = 6
+          budrain = 0
 
           if(dowr) write(outfile,*)
-          if(dowr) write(outfile,*) ' ----------------------------------------------- '
-          if(dowr) write(outfile,*) '  ... using Jensen_AHAB microphysics scheme ... '
+          if(dowr) write(outfile,*) ' ------------------------------------------------- '
+          if(dowr) write(outfile,*) '  ... using Jensen_ISHMAEL microphysics scheme ... '
           if(dowr) write(outfile,*) '         numq   = ',numq
-          if(dowr) write(outfile,*) ' ----------------------------------------------- '
+          if(dowr) write(outfile,*) ' ------------------------------------------------- '
           if(dowr) write(outfile,*)
 
-          print *
-          print *,'  Not ready yet '
-          print *
-          print *,' 35889 '
-          call stopcm1
+!-----------------------------------------------------------------------
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!-----------------------------------------------------------------------
+
+        ELSEIF(ptype.eq.14)THEN        ! Goddard 4-Ice
+
+          !------------------------------------------
+
+          iice = 1    ! this means that ptype=8 is an ice scheme
+
+          numq = 7    ! there are 6 q variables
+
+          nqv  = 1    ! qv is the first array
+          nql1 = 2    ! the first liquid variable
+          nql2 = 3    ! the last liquid variable
+          nqs1 = 4    ! the first solid variable
+          nqs2 = 7    ! the last solid variable
+
+          cloudvar(1) = .false.
+          cloudvar(2) = .true.
+          cloudvar(3) = .false.
+          cloudvar(4) = .true.
+          cloudvar(5) = .false.
+          cloudvar(6) = .false.
+          cloudvar(7) = .false.
+
+          qname(1) = 'qv'
+          qname(2) = 'qc'
+          qname(3) = 'qr'
+          qname(4) = 'qi'
+          qname(5) = 'qs'
+          qname(6) = 'qg'
+          qname(7) = 'qh'
+
+          qunit(1) = 'kg/kg'
+          qunit(2) = 'kg/kg'
+          qunit(3) = 'kg/kg'
+          qunit(4) = 'kg/kg'
+          qunit(5) = 'kg/kg'
+          qunit(6) = 'kg/kg'
+          qunit(7) = 'kg/kg'
+
+          !----- budget stuff below here -----
+
+          nbudget = 0
+
+          budrain = 0
+
+          if(dowr) write(outfile,*)
+          if(dowr) write(outfile,*) ' ------------------------------------------------ '
+          if(dowr) write(outfile,*) '  ... using Goddard 4-Ice microphysics scheme ... '
+          if(dowr) write(outfile,*) '         numq   = ',numq
+          if(dowr) write(outfile,*) ' ------------------------------------------------ '
+          if(dowr) write(outfile,*)
 
 !-----------------------------------------------------------------------
 !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -3711,10 +4134,10 @@
       do n=1,numq
         if( qname(n).eq.'qc ' .or. qname(n).eq.'ql ' ) nqc = n
         if( qname(n).eq.'qr ' ) nqr = n
-        if( qname(n).eq.'qi ' ) nqi = n
+        if( qname(n).eq.'qi ' .or. qname(n).eq.'qi1' ) nqi = n
         if( qname(n).eq.'qs ' ) nqs = n
         if( qname(n).eq.'qg ' ) nqg = n
-        if( qname(n).eq.'nci' ) nnci = n
+        if( qname(n).eq.'nci' .or. qname(n).eq.'nci1' ) nnci = n
         if( qname(n).eq.'ncc' ) nncc = n
       enddo
 
@@ -3802,6 +4225,7 @@
       output_vinterp = max(0,min(1,output_vinterp))
       output_w       = max(0,min(1,output_w))
       output_winterp = max(0,min(1,output_winterp))
+      output_vel     = max(0,min(1,output_vel))
       output_vort    = max(0,min(1,output_vort))
       output_pv      = max(0,min(1,output_pv))
       output_uh      = max(0,min(1,output_uh))
@@ -3928,6 +4352,7 @@
       if(dowr) write(outfile,*) 'output_vinterp   =',output_vinterp
       if(dowr) write(outfile,*) 'output_w         =',output_w
       if(dowr) write(outfile,*) 'output_winterp   =',output_winterp
+      if(dowr) write(outfile,*) 'output_vel       =',output_vel
       if(dowr) write(outfile,*) 'output_vort      =',output_vort
       if(dowr) write(outfile,*) 'output_pv        =',output_pv
       if(dowr) write(outfile,*) 'output_uh        =',output_uh

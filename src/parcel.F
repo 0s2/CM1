@@ -1629,7 +1629,7 @@
 
       integer, intent(inout) :: prec
       real, intent(in) :: rtime
-      character(len=3), intent(in), dimension(maxq) :: qname
+      character(len=4), intent(in), dimension(maxq) :: qname
       character(len=40), intent(in), dimension(maxvars) :: name_prcl,desc_prcl,unit_prcl
       real, intent(in), dimension(nparcels,npvals) :: pdata
       real, intent(inout), dimension(nparcels,3) :: ploc
@@ -1892,7 +1892,7 @@
       implicit none
 
       character(len=40), intent(inout), dimension(maxvars) :: name_prcl,desc_prcl,unit_prcl
-      character(len=3), intent(in), dimension(maxq) :: qname
+      character(len=4), intent(in), dimension(maxq) :: qname
 
       integer :: n,n2
       character(len=8) :: text1
@@ -1985,8 +1985,8 @@
         do n=nql1,n2
           text1='        '
           text2='                              '
-          write(text1(1:3),156) qname(n)
-          write(text2(1:3),156) qname(n)
+          write(text1(1:4),156) qname(n)
+          write(text2(1:4),156) qname(n)
 156       format(a3)
 
           prcl_out = prcl_out+1
@@ -2000,8 +2000,8 @@
         do n=nnc1,nnc2
           text1='        '
           text2='                              '
-          write(text1(1:3),156) qname(n)
-          write(text2(1:3),156) qname(n)
+          write(text1(1:4),156) qname(n)
+          write(text2(1:4),156) qname(n)
 
           prcl_out = prcl_out+1
           name_prcl(prcl_out) = text1

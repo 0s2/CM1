@@ -311,7 +311,7 @@
     print*
     global_status = STATUS_ERROR
     if (present(model)) then
-       if (trim(model) == 'WRF') then
+       if (trim(model) == 'WRF' .or. trim(model) == 'CM1') then
           print*,'Stopping in P3 init'
           stop
        endif
@@ -393,7 +393,7 @@
        print*
        global_status = STATUS_ERROR
        if (present(model)) then
-          if (trim(model) == 'WRF') then
+          if (trim(model) == 'WRF' .or. trim(model) == 'CM1') then
              print*,'Stopping in P3 init'
              stop
           endif
@@ -584,7 +584,7 @@ END subroutine p3_init
  SUBROUTINE mp_p3_wrapper_wrf(th_3d,qv_3d,qc_3d,qr_3d,qnr_3d,                            &
                               th_old_3d,qv_old_3d,                                       &
                               pii,p,dz,w,dt,itimestep,                                   &
-                              rainnc,rainncv,sr,snownc,snowncv,n_iceCat,                 &
+                              rainnc,rainncv,sr,n_iceCat,                                &
                               ids, ide, jds, jde, kds, kde ,                             &
                               ims, ime, jms, jme, kms, kme ,                             &
                               its, ite, jts, jte, kts, kte ,                             &
@@ -648,15 +648,15 @@ END subroutine p3_init
    integer, intent(in)            ::  ids, ide, jds, jde, kds, kde ,                      &
                                       ims, ime, jms, jme, kms, kme ,                      &
                                       its, ite, jts, jte, kts, kte
-   real, dimension(ims:ime, kms:kme, jms:jme), intent(inout):: th_3d,qv_3d,qc_3d,qr_3d,   &
+   real, dimension(ims:ime, jms:jme, kms:kme), intent(inout):: th_3d,qv_3d,qc_3d,qr_3d,   &
                    qnr_3d,diag_zdbz_3d,diag_effc_3d,diag_effi_3d,diag_vmi_3d,diag_di_3d,  &
                    diag_rhopo_3d,th_old_3d,qv_old_3d
-   real, dimension(ims:ime, kms:kme, jms:jme), intent(inout):: qi1_3d,qni1_3d,qir1_3d,    &
+   real, dimension(ims:ime, jms:jme, kms:kme), intent(inout):: qi1_3d,qni1_3d,qir1_3d,    &
                                                                qib1_3d
-   real, dimension(ims:ime, kms:kme, jms:jme), intent(inout), optional :: nc_3d
+   real, dimension(ims:ime, jms:jme, kms:kme), intent(inout), optional :: nc_3d
 
-   real, dimension(ims:ime, kms:kme, jms:jme), intent(in) :: pii,p,dz,w
-   real, dimension(ims:ime, jms:jme), intent(inout) :: RAINNC,RAINNCV,SR,SNOWNC,SNOWNCV
+   real, dimension(ims:ime, jms:jme, kms:kme), intent(in) :: pii,p,dz,w
+   real, dimension(ims:ime, jms:jme), intent(inout) :: RAINNC,RAINNCV,SR
    real, intent(in)    :: dt
    integer, intent(in) :: itimestep
    integer, intent(in) :: n_iceCat
@@ -699,7 +699,7 @@ END subroutine p3_init
    do j = jts,jte      ! j loop (north-south)
 
       if (log_predictNc) then
-         nc(its:ite,kts:kte)=nc_3d(its:ite,kts:kte,j)
+         nc(its:ite,kts:kte)=nc_3d(its:ite,j,kts:kte)
      ! if Nc is specified then set nc array to zero
       else
          nc=0.
@@ -708,17 +708,17 @@ END subroutine p3_init
      ! note: code for prediction of ssat not currently avaiable, set 2D array to 0
       ssat=0.
 
-       call P3_MAIN(qc_3d(its:ite,kts:kte,j),nc(its:ite,kts:kte),                                       &
-               qr_3d(its:ite,kts:kte,j),qnr_3d(its:ite,kts:kte,j),                                      &
-               th_old_3d(its:ite,kts:kte,j),th_3d(its:ite,kts:kte,j),qv_old_3d(its:ite,kts:kte,j),      &
-               qv_3d(its:ite,kts:kte,j),dt,qi1_3d(its:ite,kts:kte,j),                                   &
-               qir1_3d(its:ite,kts:kte,j),qni1_3d(its:ite,kts:kte,j),                                   &
-               qib1_3d(its:ite,kts:kte,j),ssat(its:ite,kts:kte),                                        &
-               W(its:ite,kts:kte,j),P(its:ite,kts:kte,j),                                               &
-               DZ(its:ite,kts:kte,j),itimestep,pcprt_liq,pcprt_sol,its,ite,kts,kte,n_iceCat,            &
-               diag_zdbz_3d(its:ite,kts:kte,j),diag_effc_3d(its:ite,kts:kte,j),                         &
-               diag_effi_3d(its:ite,kts:kte,j),diag_vmi_3d(its:ite,kts:kte,j),                          &
-               diag_di_3d(its:ite,kts:kte,j),diag_rhopo_3d(its:ite,kts:kte,j),                          &
+       call P3_MAIN(qc_3d(its:ite,j,kts:kte),nc(its:ite,kts:kte),                                       &
+               qr_3d(its:ite,j,kts:kte),qnr_3d(its:ite,j,kts:kte),                                      &
+               th_old_3d(its:ite,j,kts:kte),th_3d(its:ite,j,kts:kte),qv_old_3d(its:ite,j,kts:kte),      &
+               qv_3d(its:ite,j,kts:kte),dt,qi1_3d(its:ite,j,kts:kte),                                   &
+               qir1_3d(its:ite,j,kts:kte),qni1_3d(its:ite,j,kts:kte),                                   &
+               qib1_3d(its:ite,j,kts:kte),ssat(its:ite,kts:kte),                                        &
+               W(its:ite,j,kts:kte),P(its:ite,j,kts:kte),                                               &
+               DZ(its:ite,j,kts:kte),itimestep,pcprt_liq,pcprt_sol,its,ite,kts,kte,n_iceCat,            &
+               diag_zdbz_3d(its:ite,j,kts:kte),diag_effc_3d(its:ite,j,kts:kte),                         &
+               diag_effi_3d(its:ite,j,kts:kte),diag_vmi_3d(its:ite,j,kts:kte),                          &
+               diag_di_3d(its:ite,j,kts:kte),diag_rhopo_3d(its:ite,j,kts:kte),                          &
                n_diag_2d,diag_2d(its:ite,1:n_diag_2d),                                                  &
                n_diag_3d,diag_3d(its:ite,kts:kte,1:n_diag_3d),                                          &
                log_predictNc,typeDiags_ON,trim(model),clbfact_dep,clbfact_sub,debug_on,                 &
@@ -728,13 +728,13 @@ END subroutine p3_init
       dum1 = 1000.*dt
       RAINNC(its:ite,j)  = RAINNC(its:ite,j) + (pcprt_liq(:) + pcprt_sol(:))*dum1  ! conversion from m/s to mm/time step
       RAINNCV(its:ite,j) = (pcprt_liq(:) + pcprt_sol(:))*dum1                      ! conversion from m/s to mm/time step
-      SNOWNC(its:ite,j)  = SNOWNC(its:ite,j) + pcprt_sol(:)*dum1                   ! conversion from m/s to mm/time step
-      SNOWNCV(its:ite,j) = pcprt_sol(:)*dum1                                       ! conversion from m/s to mm/time step
+!!      SNOWNC(its:ite,j)  = SNOWNC(its:ite,j) + pcprt_sol(:)*dum1                   ! conversion from m/s to mm/time step
+!!      SNOWNCV(its:ite,j) = pcprt_sol(:)*dum1                                       ! conversion from m/s to mm/time step
       SR(its:ite,j)      = pcprt_sol(:)/(pcprt_liq(:)+pcprt_sol(:)+1.E-12)         ! solid-to-total ratio
 
     !convert nc array from 2D to 3D if Nc is predicted
       if (log_predictNc) then
-         nc_3d(its:ite,kts:kte,j)=nc(its:ite,kts:kte)
+         nc_3d(its:ite,j,kts:kte)=nc(its:ite,kts:kte)
       endif
 
     !set background effective radii (i.e. with no explicit condensate) to prescribed values:
@@ -755,7 +755,7 @@ END subroutine p3_init
    SUBROUTINE mp_p3_wrapper_wrf_2cat(th_3d,qv_3d,qc_3d,qr_3d,qnr_3d,                     &
                               th_old_3d,qv_old_3d,                                       &
                               pii,p,dz,w,dt,itimestep,                                   &
-                              rainnc,rainncv,sr,snownc,snowncv,n_iceCat,                 &
+                              rainnc,rainncv,sr,n_iceCat,                                &
                               ids, ide, jds, jde, kds, kde ,                             &
                               ims, ime, jms, jme, kms, kme ,                             &
                               its, ite, jts, jte, kts, kte ,                             &
@@ -824,18 +824,18 @@ END subroutine p3_init
    integer, intent(in)            ::  ids, ide, jds, jde, kds, kde ,                      &
                                       ims, ime, jms, jme, kms, kme ,                      &
                                       its, ite, jts, jte, kts, kte
-   real, dimension(ims:ime, kms:kme, jms:jme), intent(inout):: th_3d,qv_3d,qc_3d,qr_3d,   &
+   real, dimension(ims:ime, jms:jme, kms:kme), intent(inout):: th_3d,qv_3d,qc_3d,qr_3d,   &
                    qnr_3d,diag_zdbz_3d,diag_effc_3d,diag_effi_3d,diag_vmi_3d,diag_di_3d,  &
                    diag_rhopo_3d,th_old_3d,qv_old_3d,                                     &
                    diag_vmi2_3d,diag_di2_3d,diag_rhopo2_3d
-   real, dimension(ims:ime, kms:kme, jms:jme), intent(inout):: qi1_3d,qni1_3d,qir1_3d,    &
+   real, dimension(ims:ime, jms:jme, kms:kme), intent(inout):: qi1_3d,qni1_3d,qir1_3d,    &
                                                                qib1_3d
-   real, dimension(ims:ime, kms:kme, jms:jme), intent(inout) :: qi2_3d,qni2_3d,           &
+   real, dimension(ims:ime, jms:jme, kms:kme), intent(inout) :: qi2_3d,qni2_3d,           &
                                                                 qir2_3d,qib2_3d
-   real, dimension(ims:ime, kms:kme, jms:jme), intent(inout), optional :: nc_3d
+   real, dimension(ims:ime, jms:jme, kms:kme), intent(inout), optional :: nc_3d
 
-   real, dimension(ims:ime, kms:kme, jms:jme), intent(in) :: pii,p,dz,w
-   real, dimension(ims:ime, jms:jme), intent(inout) :: RAINNC,RAINNCV,SR,SNOWNC,SNOWNCV
+   real, dimension(ims:ime, jms:jme, kms:kme), intent(in) :: pii,p,dz,w
+   real, dimension(ims:ime, jms:jme), intent(inout) :: RAINNC,RAINNCV,SR
    real, intent(in)    :: dt
    integer, intent(in) :: itimestep
    integer, intent(in) :: n_iceCat
@@ -882,7 +882,7 @@ END subroutine p3_init
    do j = jts,jte      ! j loop (north-south)
 
       if (log_predictNc) then
-         nc(its:ite,kts:kte)=nc_3d(its:ite,kts:kte,j)
+         nc(its:ite,kts:kte)=nc_3d(its:ite,j,kts:kte)
      ! if Nc is specified then set nc array to zero
       else
          nc=0.
@@ -892,25 +892,25 @@ END subroutine p3_init
       ssat=0.
 
     !contruct full ice arrays from individual category arrays:
-      qitot(:,:,1) = qi1_3d(:,:,j)
-      qirim(:,:,1) = qir1_3d(:,:,j)
-      nitot(:,:,1) = qni1_3d(:,:,j)
-      birim(:,:,1) = qib1_3d(:,:,j)
+      qitot(:,:,1) = qi1_3d(:,j,:)
+      qirim(:,:,1) = qir1_3d(:,j,:)
+      nitot(:,:,1) = qni1_3d(:,j,:)
+      birim(:,:,1) = qib1_3d(:,j,:)
 
-      qitot(:,:,2) = qi2_3d(:,:,j)
-      qirim(:,:,2) = qir2_3d(:,:,j)
-      nitot(:,:,2) = qni2_3d(:,:,j)
-      birim(:,:,2) = qib2_3d(:,:,j)
+      qitot(:,:,2) = qi2_3d(:,j,:)
+      qirim(:,:,2) = qir2_3d(:,j,:)
+      nitot(:,:,2) = qni2_3d(:,j,:)
+      birim(:,:,2) = qib2_3d(:,j,:)
 
-       call P3_MAIN(qc_3d(its:ite,kts:kte,j),nc(its:ite,kts:kte),                                   &
-               qr_3d(its:ite,kts:kte,j),qnr_3d(its:ite,kts:kte,j),                                  &
-               th_old_3d(its:ite,kts:kte,j),th_3d(its:ite,kts:kte,j),qv_old_3d(its:ite,kts:kte,j),  &
-               qv_3d(its:ite,kts:kte,j),dt,qitot(its:ite,kts:kte,1:n_iceCat),                       &
+       call P3_MAIN(qc_3d(its:ite,j,kts:kte),nc(its:ite,kts:kte),                                   &
+               qr_3d(its:ite,j,kts:kte),qnr_3d(its:ite,j,kts:kte),                                  &
+               th_old_3d(its:ite,j,kts:kte),th_3d(its:ite,j,kts:kte),qv_old_3d(its:ite,j,kts:kte),  &
+               qv_3d(its:ite,j,kts:kte),dt,qitot(its:ite,kts:kte,1:n_iceCat),                       &
                qirim(its:ite,kts:kte,1:n_iceCat),nitot(its:ite,kts:kte,1:n_iceCat),                 &
                birim(its:ite,kts:kte,1:n_iceCat),ssat(its:ite,kts:kte),                             &
-               W(its:ite,kts:kte,j),P(its:ite,kts:kte,j),                                           &
-               DZ(its:ite,kts:kte,j),itimestep,pcprt_liq,pcprt_sol,its,ite,kts,kte,n_iceCat,        &
-               diag_zdbz_3d(its:ite,kts:kte,j),diag_effc_3d(its:ite,kts:kte,j),                     &
+               W(its:ite,j,kts:kte),P(its:ite,j,kts:kte),                                           &
+               DZ(its:ite,j,kts:kte),itimestep,pcprt_liq,pcprt_sol,its,ite,kts,kte,n_iceCat,        &
+               diag_zdbz_3d(its:ite,j,kts:kte),diag_effc_3d(its:ite,j,kts:kte),                     &
                diag_effi(its:ite,kts:kte,1:n_iceCat),diag_vmi(its:ite,kts:kte,1:n_iceCat),          &
                diag_di(its:ite,kts:kte,1:n_iceCat),diag_rhopo(its:ite,kts:kte,1:n_iceCat),          &
                n_diag_2d,diag_2d(its:ite,1:n_diag_2d),                                              &
@@ -922,13 +922,13 @@ END subroutine p3_init
       dum1 = 1000.*dt
       RAINNC(its:ite,j)  = RAINNC(its:ite,j) + (pcprt_liq(:) + pcprt_sol(:))*dum1  ! conversion from m/s to mm/time step
       RAINNCV(its:ite,j) = (pcprt_liq(:) + pcprt_sol(:))*dum1                      ! conversion from m/s to mm/time step
-      SNOWNC(its:ite,j)  = SNOWNC(its:ite,j) + pcprt_sol(:)*dum1                   ! conversion from m/s to mm/time step
-      SNOWNCV(its:ite,j) = pcprt_sol(:)*dum1                                       ! conversion from m/s to mm/time step
+!!      SNOWNC(its:ite,j)  = SNOWNC(its:ite,j) + pcprt_sol(:)*dum1                   ! conversion from m/s to mm/time step
+!!      SNOWNCV(its:ite,j) = pcprt_sol(:)*dum1                                       ! conversion from m/s to mm/time step
       SR(its:ite,j)      = pcprt_sol(:)/(pcprt_liq(:)+pcprt_sol(:)+1.E-12)         ! solid-to-total ratio
 
     !convert nc array from 2D to 3D if Nc is predicted
       if (log_predictNc) then
-         nc_3d(its:ite,kts:kte,j)=nc(its:ite,kts:kte)
+         nc_3d(its:ite,j,kts:kte)=nc(its:ite,kts:kte)
       endif
 
     !set background effective radii (i.e. with no explicit condensate) to prescribed values:
@@ -936,22 +936,22 @@ END subroutine p3_init
     !  where (qitot < 1.e-14) diag_effi = 25.e-6
 
     !decompose full ice arrays into individual category arrays:
-      qi1_3d(its:ite,kts:kte,j)  = qitot(its:ite,kts:kte,1)
-      qir1_3d(its:ite,kts:kte,j) = qirim(its:ite,kts:kte,1)
-      qni1_3d(its:ite,kts:kte,j) = nitot(its:ite,kts:kte,1)
-      qib1_3d(its:ite,kts:kte,j) = birim(its:ite,kts:kte,1)
+      qi1_3d(its:ite,j,kts:kte)  = qitot(its:ite,kts:kte,1)
+      qir1_3d(its:ite,j,kts:kte) = qirim(its:ite,kts:kte,1)
+      qni1_3d(its:ite,j,kts:kte) = nitot(its:ite,kts:kte,1)
+      qib1_3d(its:ite,j,kts:kte) = birim(its:ite,kts:kte,1)
 
-      qi2_3d(its:ite,kts:kte,j)  = qitot(its:ite,kts:kte,2)
-      qir2_3d(its:ite,kts:kte,j) = qirim(its:ite,kts:kte,2)
-      qni2_3d(its:ite,kts:kte,j) = nitot(its:ite,kts:kte,2)
-      qib2_3d(its:ite,kts:kte,j) = birim(its:ite,kts:kte,2)
+      qi2_3d(its:ite,j,kts:kte)  = qitot(its:ite,kts:kte,2)
+      qir2_3d(its:ite,j,kts:kte) = qirim(its:ite,kts:kte,2)
+      qni2_3d(its:ite,j,kts:kte) = nitot(its:ite,kts:kte,2)
+      qib2_3d(its:ite,j,kts:kte) = birim(its:ite,kts:kte,2)
 
-      diag_vmi_3d(its:ite,kts:kte,j)  = diag_vmi(its:ite,kts:kte,1)
-      diag_di_3d(its:ite,kts:kte,j) = diag_di(its:ite,kts:kte,1)
-      diag_rhopo_3d(its:ite,kts:kte,j) = diag_rhopo(its:ite,kts:kte,1)
-      diag_vmi2_3d(its:ite,kts:kte,j)  = diag_vmi(its:ite,kts:kte,2)
-      diag_di2_3d(its:ite,kts:kte,j) = diag_di(its:ite,kts:kte,2)
-      diag_rhopo2_3d(its:ite,kts:kte,j) = diag_rhopo(its:ite,kts:kte,2)
+      diag_vmi_3d(its:ite,j,kts:kte)  = diag_vmi(its:ite,kts:kte,1)
+      diag_di_3d(its:ite,j,kts:kte) = diag_di(its:ite,kts:kte,1)
+      diag_rhopo_3d(its:ite,j,kts:kte) = diag_rhopo(its:ite,kts:kte,1)
+      diag_vmi2_3d(its:ite,j,kts:kte)  = diag_vmi(its:ite,kts:kte,2)
+      diag_di2_3d(its:ite,j,kts:kte) = diag_di(its:ite,kts:kte,2)
+      diag_rhopo2_3d(its:ite,j,kts:kte) = diag_rhopo(its:ite,kts:kte,2)
 
          do i=its,ite
             do k=kts,kte
@@ -978,9 +978,9 @@ END subroutine p3_init
             else
                dum2=0.
             end if
-            diag_effi_3d(i,k,j)=25.e-6  ! set to default 25 microns
+            diag_effi_3d(i,j,k)=25.e-6  ! set to default 25 microns
             if (qitot(i,k,1).ge.qsmall.or.qitot(i,k,2).ge.qsmall) then
-               diag_effi_3d(i,k,j)=(qitot(i,k,1)+qitot(i,k,2))/(dum1+dum2)
+               diag_effi_3d(i,j,k)=(qitot(i,k,1)+qitot(i,k,2))/(dum1+dum2)
             end if
 
             end do
@@ -1908,7 +1908,7 @@ END subroutine p3_init
  mflux_i   = 0.
  prec      = 0.
  mu_r      = 0.
- diag_ze   = -99.
+ diag_ze   = -35.
  diam_ice  = 0.
  ze_ice    = 1.e-22
  ze_rain   = 1.e-22

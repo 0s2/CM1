@@ -60,7 +60,7 @@
     integer, intent(in) :: nstep
     double precision, intent(in) :: mtime
     integer, intent(inout) :: nwriteh
-    character(len=3), intent(in), dimension(maxq) :: qname
+    character(len=4), intent(in), dimension(maxq) :: qname
     real, intent(inout) :: dt
     logical, intent(in) :: dosfcflx
     integer, intent(in) :: icrs

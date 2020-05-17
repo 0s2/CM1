@@ -703,9 +703,9 @@
 
 
         ! for tctype=1, parameters for Rotunno-Emanuel (1987) analytic vortex:
-        r0_re87     =   412500.0
-        rmax_re87   =    82500.0
-        vmax_re87   =       15.0
+        r0_re87     =       var3
+        rmax_re87   =       var2
+        vmax_re87   =       var1
 
 
         ! for tctype=2, parameters for modified Rankine vortex:

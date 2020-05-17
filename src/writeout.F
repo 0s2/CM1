@@ -23,7 +23,7 @@
       !                 use "_output" arrays for both
       !-------------------------------------------------------------------------------
 
-      character(len=3), intent(in), dimension(maxq) :: qname
+      character(len=4), intent(in), dimension(maxq) :: qname
       character(len=20), intent(in), dimension(maxq) :: qunit
       character(len=6), intent(in), dimension(maxq) :: budname
       character(len=60), intent(inout), dimension(maxvars) :: desc_output
@@ -950,9 +950,9 @@
         if(n.ne.nqv)then
           text1='        '
           text2='                              '
-          write(text1(1:3),156) qname(n)
-          write(text2(1:3),156) qname(n)
-156       format(a3)
+          write(text1(1:4),156) qname(n)
+          write(text2(1:4),156) qname(n)
+156       format(a4)
           n_out = n_out + 1
           name_output(n_out) = text1
           desc_output(n_out) = text2
@@ -995,6 +995,13 @@
       n_out = n_out + 1
       name_output(n_out) = 'winterp '
       desc_output(n_out) = 'w interpolated to scalar points'
+      unit_output(n_out) = 'm/s'
+      grid_output(n_out) = 's'     ! s=scalar pts (3d) ; u=u pts (3d) ; v=v pts (3d) ; w=w pts (3d) ; 2=2d scalar pts
+    endif
+    if(output_vel.eq.1)then
+      n_out = n_out + 1
+      name_output(n_out) = 'velocity'
+      desc_output(n_out) = 'doppler velocity'
       unit_output(n_out) = 'm/s'
       grid_output(n_out) = 's'     ! s=scalar pts (3d) ; u=u pts (3d) ; v=v pts (3d) ; w=w pts (3d) ; 2=2d scalar pts
     endif
@@ -2232,7 +2239,7 @@
                         rxh,arh1,arh2,uh,ruh,rxf,arf1,arf2,vh,rvh,mh,rmh,rmf,rr,rf,            &
                         gz,rgz,gzu,gzv,gxu,gyv,dzdx,dzdy,c1,c2,                                &
                         cd,ch,cq,tlh,f2d,prate,dum1,dum2,dum3,dum4,dum5,dum6,dum7,dum8,        &
-                        t11,t12,t13,t22,t23,t33,rho,prs,divx,                                  &
+                        t11,t12,t13,t22,t23,t33,rho,prs,divx,velocity,                         &
                         rru,ua ,dumu,ugr  ,rrv,va ,dumv,vgr  ,rrw,wa ,dumw,ppi ,tha ,phi2,     &
                         sadv,thten,nm,defv,defh,dissten,                                       &
                         thpten,qvpten,qcpten,qipten,upten,vpten,qnipten,qncpten,xkzh,xkzq,xkzm, &
@@ -2259,6 +2266,7 @@
       use comm_module
       use misclibs
       use getcape_module
+      use doppler_module
 #ifdef MPI
       use mpi
 #endif
@@ -2276,7 +2284,7 @@
       integer, intent(inout) :: srec,urec,vrec,wrec
       real, intent(inout) :: rtime,dt
       integer, intent(in) :: fnum,nwrite
-      character(len=3), dimension(maxq), intent(in) :: qname
+      character(len=4), dimension(maxq), intent(in) :: qname
       character(len=60), intent(in), dimension(maxvars) :: desc_output
       character(len=40), intent(in), dimension(maxvars) :: name_output,unit_output
       character(len=1),  intent(in), dimension(maxvars) :: grid_output
@@ -2318,6 +2326,7 @@
       real, dimension(ib:ie,jb:je+1,kb:ke), intent(inout) :: rrv,dumv,vgr
       real, dimension(ib:ie,jb:je,kb:ke+1), intent(in) :: wa
       real, dimension(ib:ie,jb:je,kb:ke+1), intent(inout) :: rrw,dumw
+      real, dimension(ib:ie,jb:je,kb:ke), intent(inout) :: velocity
       real, dimension(ib:ie,jb:je,kb:ke), intent(in) :: ppi,tha
       real, intent(in), dimension(ibph:ieph,jbph:jeph,kbph:keph) :: phi2
       real, intent(inout), dimension(ib:ie,jb:je,kb:ke) :: sadv,thten
@@ -4128,6 +4137,20 @@
           do j=1,nj
           do i=1,ni
             dum1(i,j,k) = rho(i,j,k)-rho0(i,j,k)
+          enddo
+          enddo
+          enddo
+
+        elseif( trim(name_output(n)).eq.'velocity' )then
+
+          call doppler_velocity(xh,yh,zh,ua,va,wa,qdiag,velocity)
+
+          !$omp parallel do default(shared)  &
+          !$omp private(i,j,k)
+          do k=1,maxk
+          do j=1,nj
+          do i=1,ni
+            dum1(i,j,k) = velocity(i,j,k)
           enddo
           enddo
           enddo

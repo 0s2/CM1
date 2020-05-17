@@ -94,8 +94,8 @@
                    v0,rrv,va,v3d,vten,vten1,                         &
                    rrw,wa,w3d,wten,wten1,                            &
                    ppi,pp3d,ppten,sten,sadv,ppx,phi1,phi2,           &
-                   tha,th3d,thten,thten1,thterm,                     &
-                   qpten,qtten,qvten,qcten,qa,q3d,qten,              &
+                   tha,th3d,thten,thten1,thterm,th_old,              &
+                   qpten,qtten,qvten,qcten,qa,q3d,qten,qv_old,       &
                    kmh,kmv,khh,khv,tkea,tke3d,tketen,                &
                    nm,defv,defh,lenscl,dissten,                      &
                    thpten,qvpten,qcpten,qipten,upten,vpten,qnipten,qncpten,o30,zir,  &
@@ -128,7 +128,10 @@
                    tw1,tw2,te1,te2,ts1,ts2,tn1,tn2,                  &
                    dat1,dat2,dat3,reqt,                              &
                    tdiag,qdiag,udiag,vdiag,wdiag,kdiag,pdiag,        &
-                   out2d,out3d,                                      &
+                   out2d,out3d,di3d,vmi3d,phii3d,rhopo3d,            &
+                   physc,physe,physd,physs,physm,physf,phys_tot,acphys_tot, &
+                   acphysc,acphyse,acphysd,acphyss,acphysm,acphysf,  &
+                   preci3d,precs3d,precg3d,prech3d,precr3d,          &
                    dowriteout,dorad,getdbz,getvt,dotdwrite,dotbud,   &
                    doazimwrite,dorestart)
         ! end_solve
@@ -150,6 +153,12 @@
       use module_mp_thompson , only : mp_gt_driver
       use module_mp_graupel , only : mp_graupel
       use module_mp_nssl_2mom, only : zscale, nssl_2mom_driver
+      use module_mp_fer_hires, only : fer_hires
+      use module_mp_wsm6, only : wsm6
+      use module_mp_milbrandt2mom, only : mp_milbrandt2mom_driver
+      use module_mp_p3, only : mp_p3_wrapper_wrf, mp_p3_wrapper_wrf_2cat
+      use module_mp_jensen_ishmael, only : mp_jensen_ishmael
+      use module_mp_gsfcgce_4ice_nuwrf, only : gsfcgce_4ice_nuwrf
       use goddard_module, only : goddard,satadj_ice,consat2
       use lfoice_module, only : lfo_ice_drive,lfoice_init
       use simple_phys_module, only : testcase_simple_phys,get_avg_uvt,get_avg_uvtq
@@ -291,6 +300,23 @@
       logical, intent(in) :: dowriteout,dorad,dotdwrite,doazimwrite,dorestart
       logical, intent(inout) :: getdbz,getvt,dotbud
 
+
+!-----------------------------------------------------------------------
+! For new microphysics schemes
+
+      real, intent(inout), dimension(ib:ie,jb:je,kb:ke) :: th_old
+      real, intent(inout), dimension(ib:ie,jb:je,kb:ke) :: qv_old
+      real, intent(inout), dimension(ib:ie,jb:je,kb:ke,num_cat) :: di3d     !mass-weighted maximum diameter
+      real, intent(inout), dimension(ib:ie,jb:je,kb:ke,num_cat) :: vmi3d    !mass-weighted fall speeds
+      real, intent(inout), dimension(ib:ie,jb:je,kb:ke,num_cat) :: rhopo3d  !mass-weighted effective density
+      real, intent(inout), dimension(ib:ie,jb:je,kb:ke,num_cat) :: phii3d   !number-weighted aspect ratio
+      real, intent(inout), dimension(ib:ie,jb:je,kb:ke) :: physc,physe,physd,physs,physm,physf
+      real, intent(inout), dimension(ib:ie,jb:je,kb:ke) :: acphysc,acphyse,acphysd,acphyss,acphysm,acphysf
+      real, intent(inout), dimension(ib:ie,jb:je,kb:ke) :: preci3d,precs3d,precg3d,prech3d,precr3d
+      real, intent(inout), dimension(ib:ie,jb:je,kb:ke) :: phys_tot,acphys_tot
+      real, dimension(ib:ie,jb:je,kb:ke) :: ICE_PHY,RAIN_PHY,RIMEF_PHY
+      integer, dimension(ib:ie,jb:je) :: lowlyr
+      real, dimension(ib:ie,jb:je) :: lannndd
 !-----------------------------------------------------------------------
 ! Arrays and variables defined inside solve
 
@@ -3903,52 +3929,52 @@
                               ims = ib ,ime = ie , jms = jb ,jme = je, kms = kb,kme = ke,  &  
                               its = 1 ,ite = ni, jts = 1,jte = nj, kts = 1,kte = nk)
 
-!         ELSEIF ( ptype .eq. 29 ) THEN ! 3-moment
-!             call nssl_2mom_driver(                          &
-!                               th  = dum4,                   &
-!                               qv  = q3d(ib,jb,kb, 1),       &
-!                               qc  = q3d(ib,jb,kb, 2),       &
-!                               qr  = q3d(ib,jb,kb, 3),       &
-!                               qi  = q3d(ib,jb,kb, 4),       &
-!                               qs  = q3d(ib,jb,kb, 5),       &
-!                               qh  = q3d(ib,jb,kb, 6),       &
-!                               qhl = q3d(ib,jb,kb, 7),       &
-!                               cn  = q3d(ib,jb,kb, 8),       &
-!                               ccw = q3d(ib,jb,kb, 9),       &
-!                               crw = q3d(ib,jb,kb,10),       &
-!                               cci = q3d(ib,jb,kb, 11),      &
-!                               csw = q3d(ib,jb,kb, 12),      &
-!                               chw = q3d(ib,jb,kb, 13),      &
-!                               chl = q3d(ib,jb,kb, 14),      &
-!                               zrw = q3d(ib,jb,kb, 15),      &
-!                               zhw = q3d(ib,jb,kb, 16),      &
-!                               zhl = q3d(ib,jb,kb, 17),      &
-!                               vhw = q3d(ib,jb,kb, 18),      &
-!                               vhl = q3d(ib,jb,kb, 19),      &
-!                               pii = dum1,                   &
-!                               p   =  prs,                   &
-!                               w   =  w3d,                   &
-!                               dn  =  rho,                   &
-!                               dz  =  dum2,                  &
-!                               dtp = dt,                     &
-!                               itimestep = nstep,            &
-!                              RAIN = rain,                   &
-!                              nrain = nrain,                 &
-!                              prate = prate,                 &
-!                              dbz = qdiag(ibdq,jbdq,kbdq,qd_dbz), &
-!                              ruh = ruh, rvh = rvh, rmh = rmh, &
-!                              dx = dx, dy = dy,              &
-!                              tcond = qbudget(1),            &
-!                              tevac = qbudget(2),            &
-!                              tevar = qbudget(5),            &
-!                              train = qbudget(6),            &
-!                              rr    = dum3,                  &
-!                              diagflag = getdbz,             &
-!                  ib3d=ib3d,ie3d=ie3d,jb3d=jb3d,je3d=je3d,kb3d=kb3d,ke3d=ke3d, &
-!                  nout3d=nout3d,out3d=out3d,                                 &
-!                              ims = ib ,ime = ie , jms = jb ,jme = je, kms = kb,kme = ke,  &  
-!                              its = 1 ,ite = ni, jts = 1,jte = nj, kts = 1,kte = nk)
-!          
+          ELSEIF ( ptype .eq. 29 ) THEN ! 3-moment
+              call nssl_2mom_driver(                          &
+                                th  = dum4,                   &
+                                qv  = q3d(ib,jb,kb, 1),       &
+                                qc  = q3d(ib,jb,kb, 2),       &
+                                qr  = q3d(ib,jb,kb, 3),       &
+                                qi  = q3d(ib,jb,kb, 4),       &
+                                qs  = q3d(ib,jb,kb, 5),       &
+                                qh  = q3d(ib,jb,kb, 6),       &
+                                qhl = q3d(ib,jb,kb, 7),       &
+                                cn  = q3d(ib,jb,kb, 8),       &
+                                ccw = q3d(ib,jb,kb, 9),       &
+                                crw = q3d(ib,jb,kb,10),       &
+                                cci = q3d(ib,jb,kb, 11),      &
+                                csw = q3d(ib,jb,kb, 12),      &
+                                chw = q3d(ib,jb,kb, 13),      &
+                                chl = q3d(ib,jb,kb, 14),      &
+                                zrw = q3d(ib,jb,kb, 15),      &
+                                zhw = q3d(ib,jb,kb, 16),      &
+                                zhl = q3d(ib,jb,kb, 17),      &
+                                vhw = q3d(ib,jb,kb, 18),      &
+                                vhl = q3d(ib,jb,kb, 19),      &
+                                pii = dum1,                   &
+                                p   =  prs,                   &
+                                w   =  w3d,                   &
+                                dn  =  rho,                   &
+                                dz  =  dum2,                  &
+                                dtp = dt,                     &
+                                itimestep = nstep,            &
+                               RAIN = rain,                   &
+                               nrain = nrain,                 &
+                               prate = prate,                 &
+                               dbz = qdiag(ibdq,jbdq,kbdq,qd_dbz), &
+                               ruh = ruh, rvh = rvh, rmh = rmh, &
+                               dx = dx, dy = dy,              &
+                               tcond = qbudget(1),            &
+                               tevac = qbudget(2),            &
+                               tevar = qbudget(5),            &
+                               train = qbudget(6),            &
+                               rr    = dum3,                  &
+                               diagflag = getdbz,             &
+                   ib3d=ib3d,ie3d=ie3d,jb3d=jb3d,je3d=je3d,kb3d=kb3d,ke3d=ke3d, &
+                   nout3d=nout3d,out3d=out3d,                                 &
+                               ims = ib ,ime = ie , jms = jb ,jme = je, kms = kb,kme = ke,  &  
+                               its = 1 ,ite = ni, jts = 1,jte = nj, kts = 1,kte = nk)
+           
           ENDIF
 
         IF(eqtset.eq.2)THEN
@@ -3988,9 +4014,648 @@
 
 !
 !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-!  insert new microphysics schemes here
+!ccc   Ferrier scheme   cccccccccccccccccccccccccccccccccccccccccccccccc
 !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-!        ELSEIF(ptype.eq.8)THEN
+        ELSEIF(ptype.eq.7)THEN
+          call pdefq(    0.0,asq(1),ruh,rvh,rmh,rho,q3d(ib,jb,kb,1))
+          call pdefq( qsmall,asq(2),ruh,rvh,rmh,rho,q3d(ib,jb,kb,2))
+          call pdefq( qsmall,asq(3),ruh,rvh,rmh,rho,q3d(ib,jb,kb,3))
+          call pdefq( qsmall,asq(4),ruh,rvh,rmh,rho,q3d(ib,jb,kb,4))
+          call pdefq( qsmall,asq(5),ruh,rvh,rmh,rho,q3d(ib,jb,kb,5))
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+          do k=1,nk
+          do j=1,nj
+          do i=1,ni
+            dum1(i,j,k) = pi0(i,j,k)+pp3d(i,j,k)
+            dum2(i,j,k) = dz*rmh(i,j,k)
+            dum4(i,j,k) = th0(i,j,k)+th3d(i,j,k)
+            ! store old theta in thten array:
+            thten(i,j,k)=dum4(i,j,k)
+          enddo
+          enddo
+          enddo
+
+!$omp parallel do default(shared)  &
+!$omp private(i,j)
+          do j=1,nj
+          do i=1,ni
+            lowlyr(i,j) = 1
+          enddo
+          enddo
+
+          do_radar_ref = 1
+
+          call   fer_hires(qv=q3d(ib,jb,kb,1), &
+                           qc=q3d(ib,jb,kb,2), &
+                           qr=q3d(ib,jb,kb,3), &
+                           qi=q3d(ib,jb,kb,4), &
+                           qt=q3d(ib,jb,kb,5), &
+                  dz8w=dum2,rho_phy=rho,p_phy=prs,pi_phy=dum1,th_phy=dum4,     &
+                  itimestep=nstep,DT=dt,DX=dx,DY=dy,GID=1,LOWLYR=lowlyr,       &
+                  RAINNC=rain(ib,jb,1),RAINNCV=dum5(ib,jb,1),SR=dum5(ib,jb,2), &
+                  refl_10cm=qdiag(ibdq,jbdq,kbdq,qd_dbz), diagflag=getdbz, do_radar_ref=do_radar_ref, &
+                  F_ICE_PHY=ICE_PHY,F_RAIN_PHY=RAIN_PHY,F_RIMEF_PHY=RIMEF_PHY, &
+                  ids=1,  ide=ni+1, jds=1,  jde=nj+1, kds=1,  kde=nk+1,        &
+                  ims=ib, ime=ie,   jms=jb, jme=je,   kms=kb, kme=ke,          &
+                  its=1,  ite=ni,   jts=1,  jte=nj,   kts=1,  kte=nk)
+
+          IF(eqtset.eq.2)THEN
+            ! for mass conservation:
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              if( abs(dum4(i,j,k)-thten(i,j,k)).ge.tsmall .or.  &
+                  abs(q3d(i,j,k,nqv)-qten(i,j,k,nqv)).ge.qsmall )then
+                prs(i,j,k) = rho(i,j,k)*rd*dum4(i,j,k)*dum1(i,j,k)*(1.0+q3d(i,j,k,nqv)*reps)
+                pp3d(i,j,k) = (prs(i,j,k)*rp00)**rovcp - pi0(i,j,k)
+                th3d(i,j,k) = dum4(i,j,k)*dum1(i,j,k)/(pi0(i,j,k)+pp3d(i,j,k)) - th0(i,j,k)
+              endif
+            enddo
+            enddo
+            enddo
+          ELSE
+            ! traditional thermodynamics:  p,pi remain unchanged
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              if( abs(dum4(i,j,k)-thten(i,j,k)).ge.tsmall .or.  &
+                  abs(q3d(i,j,k,nqv)-qten(i,j,k,nqv)).ge.qsmall )then
+                th3d(i,j,k)= dum4(i,j,k) - th0(i,j,k)
+                rho(i,j,k)=prs(i,j,k)/(rd*dum4(i,j,k)*dum1(i,j,k)*(1.0+q3d(i,j,k,nqv)*reps))
+              endif
+            enddo
+            enddo
+            enddo
+          ENDIF
+          if(timestats.ge.1) time_microphy=time_microphy+mytime()
+
+!
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!ccc   WSM6 scheme   ccccccccccccccccccccccccccccccccccccccccccccccccccc
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        ELSEIF(ptype.eq.8)THEN
+          call pdefq(    0.0,asq(1),ruh,rvh,rmh,rho,q3d(ib,jb,kb,1))
+          call pdefq( qsmall,asq(2),ruh,rvh,rmh,rho,q3d(ib,jb,kb,2))
+          call pdefq( qsmall,asq(3),ruh,rvh,rmh,rho,q3d(ib,jb,kb,3))
+          call pdefq( qsmall,asq(4),ruh,rvh,rmh,rho,q3d(ib,jb,kb,4))
+          call pdefq( qsmall,asq(5),ruh,rvh,rmh,rho,q3d(ib,jb,kb,5))
+          call pdefq( qsmall,asq(6),ruh,rvh,rmh,rho,q3d(ib,jb,kb,6))
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+          do k=1,nk
+          do j=1,nj
+          do i=1,ni
+            dum1(i,j,k) = pi0(i,j,k)+pp3d(i,j,k)
+            dum2(i,j,k) = dz*rmh(i,j,k)
+            dum4(i,j,k) = th0(i,j,k)+th3d(i,j,k)
+            ! store old theta in thten array:
+            thten(i,j,k)=dum4(i,j,k)
+          enddo
+          enddo
+          enddo
+
+          if( radopt.eq.2 )then
+            has_reqc = 1
+            has_reqi = 1
+            has_reqs = 1
+          else
+            has_reqc = 0
+            has_reqi = 0
+            has_reqs = 0
+          endif
+          do_radar_ref = 1
+
+          call   wsm6(q=q3d(ib,jb,kb,1),  &
+                      qc=q3d(ib,jb,kb,2), &
+                      qr=q3d(ib,jb,kb,3), &
+                      qi=q3d(ib,jb,kb,4), &
+                      qs=q3d(ib,jb,kb,5), &
+                      qg=q3d(ib,jb,kb,6), &
+                  th=dum4, den=rho, pii=dum1, p=prs, delz=dum2,             &
+                  delt=dt, g=g, cpd=cp, cpv=cpv, rd=rd, rv=rv, t0c=to,      &
+                  ep1=repsm1, ep2=eps, qmin=epsilon,                        &
+                  xls=xls, xlv0=xlv, xlf0=xlf, den0=rhoair0, denr=rhowater, &
+                  cliq=cpl, cice=cpi, psat=psat,                            &
+                  rain=rain(ib,jb,1), rainncv=dum5(ib,jb,1),                &
+                  sr=dum5(ib,jb,2),                                         &
+                  refl_10cm=qdiag(ibdq,jbdq,kbdq,qd_dbz), diagflag=getdbz, do_radar_ref=do_radar_ref, &
+                  has_reqc=has_reqc, has_reqi=has_reqi, has_reqs=has_reqs,  &
+                  re_cloud=dum6, re_ice=dum7, re_snow=dum8,                 &
+                  ids=1,  ide=ni+1, jds=1,  jde=nj+1, kds=1,  kde=nk+1,     &
+                  ims=ib, ime=ie,   jms=jb, jme=je,   kms=kb, kme=ke,       &
+                  its=1,  ite=ni,   jts=1,  jte=nj,   kts=1,  kte=nk)
+
+          IF(eqtset.eq.2)THEN
+            ! for mass conservation:
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              if( abs(dum4(i,j,k)-thten(i,j,k)).ge.tsmall .or.  &
+                  abs(q3d(i,j,k,nqv)-qten(i,j,k,nqv)).ge.qsmall )then
+                prs(i,j,k) = rho(i,j,k)*rd*dum4(i,j,k)*dum1(i,j,k)*(1.0+q3d(i,j,k,nqv)*reps)
+                pp3d(i,j,k) = (prs(i,j,k)*rp00)**rovcp - pi0(i,j,k)
+                th3d(i,j,k) = dum4(i,j,k)*dum1(i,j,k)/(pi0(i,j,k)+pp3d(i,j,k)) - th0(i,j,k)
+              endif
+            enddo
+            enddo
+            enddo
+          ELSE
+            ! traditional thermodynamics:  p,pi remain unchanged
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              if( abs(dum4(i,j,k)-thten(i,j,k)).ge.tsmall .or.  &
+                  abs(q3d(i,j,k,nqv)-qten(i,j,k,nqv)).ge.qsmall )then
+                th3d(i,j,k)= dum4(i,j,k) - th0(i,j,k)
+                rho(i,j,k)=prs(i,j,k)/(rd*dum4(i,j,k)*dum1(i,j,k)*(1.0+q3d(i,j,k,nqv)*reps))
+              endif
+            enddo
+            enddo
+            enddo
+          ENDIF
+          if( radopt.eq.2 )then
+            !$omp parallel do default(shared)  &
+            !$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              effc(i,j,k) = dum6(i,j,k)
+              effi(i,j,k) = dum7(i,j,k)
+              effs(i,j,k) = dum8(i,j,k)
+            enddo
+            enddo
+            enddo
+          endif
+          if(timestats.ge.1) time_microphy=time_microphy+mytime()
+
+!
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!ccc   Milbrandt-Yau double moment scheme   cccccccccccccccccccccccccccc
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        ELSEIF(ptype.eq.9)THEN
+          call pdefq(    0.0,asq(1),ruh,rvh,rmh,rho,q3d(ib,jb,kb,1))
+          call pdefq( qsmall,asq(2),ruh,rvh,rmh,rho,q3d(ib,jb,kb,2))
+          call pdefq( qsmall,asq(3),ruh,rvh,rmh,rho,q3d(ib,jb,kb,3))
+          call pdefq( qsmall,asq(4),ruh,rvh,rmh,rho,q3d(ib,jb,kb,4))
+          call pdefq( qsmall,asq(5),ruh,rvh,rmh,rho,q3d(ib,jb,kb,5))
+          call pdefq( qsmall,asq(6),ruh,rvh,rmh,rho,q3d(ib,jb,kb,6))
+          call pdefq( qsmall,asq(7),ruh,rvh,rmh,rho,q3d(ib,jb,kb,7))
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+          do k=1,nk
+          do j=1,nj
+          do i=1,ni
+            dum1(i,j,k) = pi0(i,j,k)+pp3d(i,j,k)
+            dum2(i,j,k) = dz*rmh(i,j,k)
+            dum4(i,j,k) = th0(i,j,k)+th3d(i,j,k)
+            ! store old theta in thten array:
+            thten(i,j,k)=dum4(i,j,k)
+          enddo
+          enddo
+          enddo
+
+          call   mp_milbrandt2mom_driver(qv=q3d(ib,jb,kb,1),  &
+                                         qc=q3d(ib,jb,kb,2),  &
+                                         qr=q3d(ib,jb,kb,3),  &
+		                                 qi=q3d(ib,jb,kb,4),  &
+		                                 qs=q3d(ib,jb,kb,5),  &
+		                                 qg=q3d(ib,jb,kb,6),  &
+		                                 qh=q3d(ib,jb,kb,7),  &
+                                         nc=q3d(ib,jb,kb,8),  &
+                                         nr=q3d(ib,jb,kb,9),  &
+                                         ni=q3d(ib,jb,kb,10), &
+                                         ns=q3d(ib,jb,kb,11), &
+                                         ng=q3d(ib,jb,kb,12), &
+                                         nh=q3d(ib,jb,kb,13), &
+                  th=dum4,pii=dum1,p=prs,psfc=psfc,w=w3d,dz=dum2,dt_in=dt,itimestep=nstep, &
+                  RAINNC=rain(ib,jb,1),RAINNCV=dum5(ib,jb,1),SR=dum5(ib,jb,2),Zet=qdiag(ibdq,jbdq,kbdq,qd_dbz), &
+                  ids=1,  ide=ni+1, jds=1,  jde=nj+1, kds=1,  kde=nk+1,                    &
+                  ims=ib, ime=ie,   jms=jb, jme=je,   kms=kb, kme=ke,                      &
+                  its=1,  ite=ni,   jts=1,  jte=nj,   kts=1,  kte=nk                       )
+          IF(eqtset.eq.2)THEN
+            ! for mass conservation:
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              if( abs(dum4(i,j,k)-thten(i,j,k)).ge.tsmall .or.  &
+                  abs(q3d(i,j,k,nqv)-qten(i,j,k,nqv)).ge.qsmall )then
+                prs(i,j,k) = rho(i,j,k)*rd*dum4(i,j,k)*dum1(i,j,k)*(1.0+q3d(i,j,k,nqv)*reps)
+                pp3d(i,j,k) = (prs(i,j,k)*rp00)**rovcp - pi0(i,j,k)
+                th3d(i,j,k) = dum4(i,j,k)*dum1(i,j,k)/(pi0(i,j,k)+pp3d(i,j,k)) - th0(i,j,k)
+              endif
+            enddo
+            enddo
+            enddo
+          ELSE
+            ! traditional thermodynamics:  p,pi remain unchanged
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              if( abs(dum4(i,j,k)-thten(i,j,k)).ge.tsmall .or.  &
+                  abs(q3d(i,j,k,nqv)-qten(i,j,k,nqv)).ge.qsmall )then
+                th3d(i,j,k)= dum4(i,j,k) - th0(i,j,k)
+                rho(i,j,k)=prs(i,j,k)/(rd*dum4(i,j,k)*dum1(i,j,k)*(1.0+q3d(i,j,k,nqv)*reps))
+              endif
+            enddo
+            enddo
+            enddo
+          ENDIF
+          if(timestats.ge.1) time_microphy=time_microphy+mytime()
+
+!
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!ccc   P3 1-category scheme   cccccccccccccccccccccccccccccccccccccccccc
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        ELSEIF(ptype.eq.10)THEN
+          call pdefq(    0.0,asq(1),ruh,rvh,rmh,rho,q3d(ib,jb,kb,1))
+          call pdefq( qsmall,asq(2),ruh,rvh,rmh,rho,q3d(ib,jb,kb,2))
+          call pdefq( qsmall,asq(3),ruh,rvh,rmh,rho,q3d(ib,jb,kb,3))
+          call pdefq( qsmall,asq(4),ruh,rvh,rmh,rho,q3d(ib,jb,kb,4))
+          call pdefq( qsmall,asq(5),ruh,rvh,rmh,rho,q3d(ib,jb,kb,5))
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+          do k=1,nk
+          do j=1,nj
+          do i=1,ni
+            dum1(i,j,k) = pi0(i,j,k)+pp3d(i,j,k)
+            dum2(i,j,k) = dz*rmh(i,j,k)
+            dum4(i,j,k) = th0(i,j,k)+th3d(i,j,k)
+            ! store old theta in thten array:
+            thten(i,j,k)=dum4(i,j,k)
+          enddo
+          enddo
+          enddo
+
+          call   mp_p3_wrapper_wrf(qv_3d=q3d(ib,jb,kb,1),   &
+                                   qc_3d=q3d(ib,jb,kb,2),   &
+                                   qr_3d=q3d(ib,jb,kb,3),   &
+		                           qi1_3d=q3d(ib,jb,kb,4),  &
+		                           qir1_3d=q3d(ib,jb,kb,5), &
+		                           nc_3d=q3d(ib,jb,kb,6),   &
+		                           qnr_3d=q3d(ib,jb,kb,7),  &
+                                   qni1_3d=q3d(ib,jb,kb,8), &
+                                   qib1_3d=q3d(ib,jb,kb,9), &
+                  th_3d=dum4, th_old_3d=th_old, qv_old_3d=qv_old,            &
+                  pii=dum1, p=prs, dz=dum2, w=w3d, dt=dt, itimestep=nstep,   &
+                  rainnc=rain(ib,jb,1), rainncv=dum5(ib,jb,1), SR=dum5(ib,jb,2), n_iceCat=1,       &
+                  diag_zdbz_3d=qdiag(ibdq,jbdq,kbdq,qd_dbz), diag_effc_3d=dum6, diag_effi_3d=dum7, &
+                  diag_vmi_3d=vmi3d(ib,jb,kb,1), diag_di_3d=di3d(ib,jb,kb,1), diag_rhopo_3d=rhopo3d(ib,jb,kb,1), &
+                  ids=1,  ide=ni+1, jds=1,  jde=nj+1, kds=1,  kde=nk+1,      &
+                  ims=ib, ime=ie,   jms=jb, jme=je,   kms=kb, kme=ke,        &
+                  its=1,  ite=ni,   jts=1,  jte=nj,   kts=1,  kte=nk         )
+          IF(eqtset.eq.2)THEN
+            ! for mass conservation:
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              if( abs(dum4(i,j,k)-thten(i,j,k)).ge.tsmall .or.  &
+                  abs(q3d(i,j,k,nqv)-qten(i,j,k,nqv)).ge.qsmall )then
+                prs(i,j,k) = rho(i,j,k)*rd*dum4(i,j,k)*dum1(i,j,k)*(1.0+q3d(i,j,k,nqv)*reps)
+                pp3d(i,j,k) = (prs(i,j,k)*rp00)**rovcp - pi0(i,j,k)
+                th3d(i,j,k) = dum4(i,j,k)*dum1(i,j,k)/(pi0(i,j,k)+pp3d(i,j,k)) - th0(i,j,k)
+              endif
+            enddo
+            enddo
+            enddo
+          ELSE
+            ! traditional thermodynamics:  p,pi remain unchanged
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              if( abs(dum4(i,j,k)-thten(i,j,k)).ge.tsmall .or.  &
+                  abs(q3d(i,j,k,nqv)-qten(i,j,k,nqv)).ge.qsmall )then
+                th3d(i,j,k)= dum4(i,j,k) - th0(i,j,k)
+                rho(i,j,k)=prs(i,j,k)/(rd*dum4(i,j,k)*dum1(i,j,k)*(1.0+q3d(i,j,k,nqv)*reps))
+              endif
+            enddo
+            enddo
+            enddo
+          ENDIF
+          if( radopt.eq.2 )then
+            !$omp parallel do default(shared)  &
+            !$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              effc(i,j,k) = dum6(i,j,k)
+              effi(i,j,k) = dum7(i,j,k)
+            enddo
+            enddo
+            enddo
+          endif
+          if(timestats.ge.1) time_microphy=time_microphy+mytime()
+!
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!ccc   P3 2-category scheme   cccccccccccccccccccccccccccccccccccccccccc
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        ELSEIF(ptype.eq.11)THEN
+          call pdefq(    0.0,asq(1),ruh,rvh,rmh,rho,q3d(ib,jb,kb,1))
+          call pdefq( qsmall,asq(2),ruh,rvh,rmh,rho,q3d(ib,jb,kb,2))
+          call pdefq( qsmall,asq(3),ruh,rvh,rmh,rho,q3d(ib,jb,kb,3))
+          call pdefq( qsmall,asq(4),ruh,rvh,rmh,rho,q3d(ib,jb,kb,4))
+          call pdefq( qsmall,asq(5),ruh,rvh,rmh,rho,q3d(ib,jb,kb,5))
+          call pdefq( qsmall,asq(6),ruh,rvh,rmh,rho,q3d(ib,jb,kb,6))
+          call pdefq( qsmall,asq(7),ruh,rvh,rmh,rho,q3d(ib,jb,kb,7))
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+          do k=1,nk
+          do j=1,nj
+          do i=1,ni
+            dum1(i,j,k) = pi0(i,j,k)+pp3d(i,j,k)
+            dum2(i,j,k) = dz*rmh(i,j,k)
+            dum4(i,j,k) = th0(i,j,k)+th3d(i,j,k)
+            ! store old theta in thten array:
+            thten(i,j,k)=dum4(i,j,k)
+          enddo
+          enddo
+          enddo
+
+          call   mp_p3_wrapper_wrf_2cat(qv_3d=q3d(ib,jb,kb,1),    &
+                                        qc_3d=q3d(ib,jb,kb,2),    &
+                                        qr_3d=q3d(ib,jb,kb,3),    &
+		                                qi1_3d=q3d(ib,jb,kb,4),   &
+		                                qi2_3d=q3d(ib,jb,kb,5),   &
+		                                qir1_3d=q3d(ib,jb,kb,6),  &
+                                        qir2_3d=q3d(ib,jb,kb,7),  &
+		                                nc_3d=q3d(ib,jb,kb,8),    &
+		                                qnr_3d=q3d(ib,jb,kb,9),   &
+                                        qni1_3d=q3d(ib,jb,kb,10), &
+                                        qni2_3d=q3d(ib,jb,kb,11), &
+                                        qib1_3d=q3d(ib,jb,kb,12), &
+                                        qib2_3d=q3d(ib,jb,kb,13), &
+                  th_3d=dum4, th_old_3d=th_old, qv_old_3d=qv_old, &
+                  pii=dum1, p=prs, dz=dum2, w=w3d, dt=dt, itimestep=nstep,   &
+                  rainnc=rain(ib,jb,1), rainncv=dum5(ib,jb,1), SR=dum5(ib,jb,2), n_iceCat=2,       &
+                  diag_zdbz_3d=qdiag(ibdq,jbdq,kbdq,qd_dbz), diag_effc_3d=dum6, diag_effi_3d=dum7, &
+                  diag_vmi_3d=vmi3d(ib,jb,kb,1),  diag_di_3d=di3d(ib,jb,kb,1),  diag_rhopo_3d=rhopo3d(ib,jb,kb,1),  &
+                  diag_vmi2_3d=vmi3d(ib,jb,kb,2), diag_di2_3d=di3d(ib,jb,kb,2), diag_rhopo2_3d=rhopo3d(ib,jb,kb,2), &
+                  ids=1,  ide=ni+1, jds=1,  jde=nj+1, kds=1,  kde=nk+1,      &
+                  ims=ib, ime=ie,   jms=jb, jme=je,   kms=kb, kme=ke,        &
+                  its=1,  ite=ni,   jts=1,  jte=nj,   kts=1,  kte=nk         )
+          IF(eqtset.eq.2)THEN
+            ! for mass conservation:
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              if( abs(dum4(i,j,k)-thten(i,j,k)).ge.tsmall .or.  &
+                  abs(q3d(i,j,k,nqv)-qten(i,j,k,nqv)).ge.qsmall )then
+                prs(i,j,k) = rho(i,j,k)*rd*dum4(i,j,k)*dum1(i,j,k)*(1.0+q3d(i,j,k,nqv)*reps)
+                pp3d(i,j,k) = (prs(i,j,k)*rp00)**rovcp - pi0(i,j,k)
+                th3d(i,j,k) = dum4(i,j,k)*dum1(i,j,k)/(pi0(i,j,k)+pp3d(i,j,k)) - th0(i,j,k)
+              endif
+            enddo
+            enddo
+            enddo
+          ELSE
+            ! traditional thermodynamics:  p,pi remain unchanged
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              if( abs(dum4(i,j,k)-thten(i,j,k)).ge.tsmall .or.  &
+                  abs(q3d(i,j,k,nqv)-qten(i,j,k,nqv)).ge.qsmall )then
+                th3d(i,j,k)= dum4(i,j,k) - th0(i,j,k)
+                rho(i,j,k)=prs(i,j,k)/(rd*dum4(i,j,k)*dum1(i,j,k)*(1.0+q3d(i,j,k,nqv)*reps))
+              endif
+            enddo
+            enddo
+            enddo
+          ENDIF
+          if( radopt.eq.2 )then
+            !$omp parallel do default(shared)  &
+            !$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              effc(i,j,k) = dum6(i,j,k)
+              effi(i,j,k) = dum7(i,j,k)
+            enddo
+            enddo
+            enddo
+          endif
+          if(timestats.ge.1) time_microphy=time_microphy+mytime()
+
+!
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!ccc   Jensen-ISHMAEL scheme   ccccccccccccccccccccccccccccccccccccccccc
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        ELSEIF(ptype.eq.12)THEN
+          call pdefq(    0.0,asq(1),ruh,rvh,rmh,rho,q3d(ib,jb,kb,1))
+          call pdefq( qsmall,asq(2),ruh,rvh,rmh,rho,q3d(ib,jb,kb,2))
+          call pdefq( qsmall,asq(3),ruh,rvh,rmh,rho,q3d(ib,jb,kb,3))
+          call pdefq( qsmall,asq(4),ruh,rvh,rmh,rho,q3d(ib,jb,kb,4))
+          call pdefq( qsmall,asq(5),ruh,rvh,rmh,rho,q3d(ib,jb,kb,5))
+          call pdefq( qsmall,asq(6),ruh,rvh,rmh,rho,q3d(ib,jb,kb,6))
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+          do k=1,nk
+          do j=1,nj
+          do i=1,ni
+            dum1(i,j,k) = pi0(i,j,k)+pp3d(i,j,k)
+            dum2(i,j,k) = dz*rmh(i,j,k)
+            dum4(i,j,k) = th0(i,j,k)+th3d(i,j,k)
+            ! store old theta in thten array:
+            thten(i,j,k)=dum4(i,j,k)
+          enddo
+          enddo
+          enddo
+
+          call   mp_jensen_ishmael(qv=q3d(ib,jb,kb,1),   &
+                                   qc=q3d(ib,jb,kb,2),   &
+                                   qr=q3d(ib,jb,kb,3),   &
+		                           qi1=q3d(ib,jb,kb,4),  &
+		                           qi2=q3d(ib,jb,kb,5),  &
+		                           qi3=q3d(ib,jb,kb,6),  &
+                                   nr=q3d(ib,jb,kb,7),   &
+                                   ni1=q3d(ib,jb,kb,8),  &
+                                   ni2=q3d(ib,jb,kb,9),  &
+                                   ni3=q3d(ib,jb,kb,10), &
+                                   ai1=q3d(ib,jb,kb,11), &
+                                   ai2=q3d(ib,jb,kb,12), &
+                                   ai3=q3d(ib,jb,kb,13), &
+                                   ci1=q3d(ib,jb,kb,14), &
+                                   ci2=q3d(ib,jb,kb,15), &
+                                   ci3=q3d(ib,jb,kb,16), &
+                  itimestep=nstep, dt_in=dt, p=prs, dz=dum2, th=dum4,            &
+                  RAINNC=rain(ib,jb,1), RAINNCV=dum5(ib,jb,1),                   &
+                  diag_effc3d=dum6, diag_effi3d=dum7, diag_dbz3d=qdiag(ibdq,jbdq,kbdq,qd_dbz), &
+                  diag_vmi3d_1=vmi3d(ib,jb,kb,1), diag_di3d_1=di3d(ib,jb,kb,1),  &
+                  diag_vmi3d_2=vmi3d(ib,jb,kb,2), diag_di3d_2=di3d(ib,jb,kb,2),  &
+                  diag_vmi3d_3=vmi3d(ib,jb,kb,3), diag_di3d_3=di3d(ib,jb,kb,3),  &
+                  diag_rhopo3d_1=rhopo3d(ib,jb,kb,1), diag_phii3d_1=phii3d(ib,jb,kb,1), &
+                  diag_rhopo3d_2=rhopo3d(ib,jb,kb,2), diag_phii3d_2=phii3d(ib,jb,kb,2), &
+                  diag_rhopo3d_3=rhopo3d(ib,jb,kb,3), diag_phii3d_3=phii3d(ib,jb,kb,3), &
+                  diag_itype_1=dum3,diag_itype_2=dum5,diag_itype_3=dum8,     &
+                  ids=1,  ide=ni+1, jds=1,  jde=nj+1, kds=1,  kde=nk+1,      &
+                  ims=ib, ime=ie,   jms=jb, jme=je,   kms=kb, kme=ke,        &
+                  its=1,  ite=ni,   jts=1,  jte=nj,   kts=1,  kte=nk         )
+          IF(eqtset.eq.2)THEN
+            ! for mass conservation:
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              if( abs(dum4(i,j,k)-thten(i,j,k)).ge.tsmall .or.  &
+                  abs(q3d(i,j,k,nqv)-qten(i,j,k,nqv)).ge.qsmall )then
+                prs(i,j,k) = rho(i,j,k)*rd*dum4(i,j,k)*dum1(i,j,k)*(1.0+q3d(i,j,k,nqv)*reps)
+                pp3d(i,j,k) = (prs(i,j,k)*rp00)**rovcp - pi0(i,j,k)
+                th3d(i,j,k) = dum4(i,j,k)*dum1(i,j,k)/(pi0(i,j,k)+pp3d(i,j,k)) - th0(i,j,k)
+              endif
+            enddo
+            enddo
+            enddo
+          ELSE
+            ! traditional thermodynamics:  p,pi remain unchanged
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              if( abs(dum4(i,j,k)-thten(i,j,k)).ge.tsmall .or.  &
+                  abs(q3d(i,j,k,nqv)-qten(i,j,k,nqv)).ge.qsmall )then
+                th3d(i,j,k)= dum4(i,j,k) - th0(i,j,k)
+                rho(i,j,k)=prs(i,j,k)/(rd*dum4(i,j,k)*dum1(i,j,k)*(1.0+q3d(i,j,k,nqv)*reps))
+              endif
+            enddo
+            enddo
+            enddo
+          ENDIF
+          if( radopt.eq.2 )then
+            !$omp parallel do default(shared)  &
+            !$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              effc(i,j,k) = dum6(i,j,k)
+              effi(i,j,k) = dum7(i,j,k)
+            enddo
+            enddo
+            enddo
+          endif
+          if(timestats.ge.1) time_microphy=time_microphy+mytime()
+
+!
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!ccc   GSFCGCE 4ICE scheme   ccccccccccccccccccccccccccccccccccccccccccc
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        ELSEIF(ptype.eq.14)THEN
+          call pdefq(    0.0,asq(1),ruh,rvh,rmh,rho,q3d(ib,jb,kb,1))
+          call pdefq( qsmall,asq(2),ruh,rvh,rmh,rho,q3d(ib,jb,kb,2))
+          call pdefq( qsmall,asq(3),ruh,rvh,rmh,rho,q3d(ib,jb,kb,3))
+          call pdefq( qsmall,asq(4),ruh,rvh,rmh,rho,q3d(ib,jb,kb,4))
+          call pdefq( qsmall,asq(5),ruh,rvh,rmh,rho,q3d(ib,jb,kb,5))
+          call pdefq( qsmall,asq(6),ruh,rvh,rmh,rho,q3d(ib,jb,kb,6))
+          call pdefq( qsmall,asq(7),ruh,rvh,rmh,rho,q3d(ib,jb,kb,7))
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+          do k=1,nk
+          do j=1,nj
+          do i=1,ni
+            dum1(i,j,k) = pi0(i,j,k)+pp3d(i,j,k)
+            dum2(i,j,k) = dz*rmh(i,j,k)
+            dum4(i,j,k) = th0(i,j,k)+th3d(i,j,k)
+            ! store old theta in thten array:
+            thten(i,j,k)=dum4(i,j,k)
+          enddo
+          enddo
+          enddo
+
+          do j=1,nj
+          do i=1,ni
+            lannndd(i,j) = 2.0
+          enddo
+          enddo
+
+          do_radar_ref = 1
+
+          call   gsfcgce_4ice_nuwrf(qv=q3d(ib,jb,kb,1), &
+                                    ql=q3d(ib,jb,kb,2), &
+                                    qr=q3d(ib,jb,kb,3), &
+                                    qi=q3d(ib,jb,kb,4), &
+                                    qs=q3d(ib,jb,kb,5), &
+                                    qg=q3d(ib,jb,kb,6), &
+                                    qh=q3d(ib,jb,kb,7), &
+                  th=dum4, rho=rho, pii=dum1, p=prs, dt_in=dt, z=zh,          &
+                  ht=zs, dz8w=dum2, grav=g, w=w3d,                            &
+                  rhowater=rhowater, rhosnow=rhosnow,                         &
+                  itimestep=nstep, xland=lannndd, dx=dx,                      &
+                  RAINNC=rain(ib,jb,1), RAINNCV=dum5(ib,jb,1), SR=dum5(ib,jb,2),                       &
+                  refl_10cm=qdiag(ibdq,jbdq,kbdq,qd_dbz), diagflag=getdbz, do_radar_ref=do_radar_ref,  &
+                  physc=physc, physe=physe, physd=physd, physs=physs, physm=physm, physf=physf,        &
+                  acphysc=acphysc, acphyse=acphyse, acphysd=acphysd, acphyss=acphyss, acphysm=acphysm, acphysf=acphysf, &
+                  re_cloud_gsfc=effc, re_rain_gsfc=effr, re_ice_gsfc=effi,    &
+                  re_snow_gsfc=effs, re_graupel_gsfc=effg, re_hail_gsfc=dum8, &
+                  preci3d=preci3d, precs3d=precs3d, precg3d=precg3d, prech3d=prech3d, precr3d=precr3d, &
+                  ids=1,  ide=ni+1, jds=1,  jde=nj+1, kds=1,  kde=nk+1,       &
+                  ims=ib, ime=ie,   jms=jb, jme=je,   kms=kb, kme=ke,         &
+                  its=1,  ite=ni,   jts=1,  jte=nj,   kts=1,  kte=nk)
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+          do k=1,nk
+          do j=1,nj
+          do i=1,ni
+            ! Snapshot total latent heating rate [K/s]
+            phys_tot(i,j,k) = physc(i,j,k)+physe(i,j,k)+physd(i,j,k)+physs(i,j,k)+physm(i,j,k)+physf(i,j,k)
+            ! Accumulated total latent heating [K]
+            acphys_tot(i,j,k) = acphysc(i,j,k)+acphyse(i,j,k)+acphysd(i,j,k)+acphyss(i,j,k)+acphysm(i,j,k)+acphysf(i,j,k)
+          enddo
+          enddo
+          enddo
+          IF(eqtset.eq.2)THEN
+            ! for mass conservation:
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              if( abs(dum4(i,j,k)-thten(i,j,k)).ge.tsmall .or.  &
+                  abs(q3d(i,j,k,nqv)-qten(i,j,k,nqv)).ge.qsmall )then
+                prs(i,j,k) = rho(i,j,k)*rd*dum4(i,j,k)*dum1(i,j,k)*(1.0+q3d(i,j,k,nqv)*reps)
+                pp3d(i,j,k) = (prs(i,j,k)*rp00)**rovcp - pi0(i,j,k)
+                th3d(i,j,k) = dum4(i,j,k)*dum1(i,j,k)/(pi0(i,j,k)+pp3d(i,j,k)) - th0(i,j,k)
+              endif
+            enddo
+            enddo
+            enddo
+          ELSE
+            ! traditional thermodynamics:  p,pi remain unchanged
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              if( abs(dum4(i,j,k)-thten(i,j,k)).ge.tsmall .or.  &
+                  abs(q3d(i,j,k,nqv)-qten(i,j,k,nqv)).ge.qsmall )then
+                th3d(i,j,k)= dum4(i,j,k) - th0(i,j,k)
+                rho(i,j,k)=prs(i,j,k)/(rd*dum4(i,j,k)*dum1(i,j,k)*(1.0+q3d(i,j,k,nqv)*reps))
+              endif
+            enddo
+            enddo
+            enddo
+          ENDIF
+          if(timestats.ge.1) time_microphy=time_microphy+mytime()
+
 !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 ! otherwise, stop for undefined ptype
         ELSE

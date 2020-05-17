@@ -32,7 +32,7 @@
 !  Note to self ... this should be changed, somehow, in the future.
 !  GHB 060806
 
-    if(ptype.eq.1.or.ptype.eq.2.or.ptype.eq.3.or.ptype.eq.5.or.ptype.eq.6)then
+    if(ptype.eq.1.or.ptype.eq.2.or.ptype.eq.3.or.ptype.eq.5.or.ptype.eq.6.or.ptype.eq.7.or.ptype.eq.8.or.ptype.eq.9.or.ptype.eq.10.or.ptype.eq.11.or.ptype.eq.12.or.ptype.eq.13.or.ptype.eq.14)then
 
       ! from Bolton (1980, MWR)
       esl=611.2 * EXP( 17.67 * ( T  - 273.15 ) / ( T  - 29.65 ) )
@@ -85,7 +85,7 @@
 !  Note to self ... this should be changed, somehow, in the future.
 !  GHB 060806
 
-    if(ptype.eq.1.or.ptype.eq.2.or.ptype.eq.3.or.ptype.eq.5.or.ptype.eq.6)then
+    if(ptype.eq.1.or.ptype.eq.2.or.ptype.eq.3.or.ptype.eq.5.or.ptype.eq.6.or.ptype.eq.7.or.ptype.eq.8.or.ptype.eq.9.or.ptype.eq.10.or.ptype.eq.11.or.ptype.eq.12.or.ptype.eq.13.or.ptype.eq.14)then
 
       ! from Tao et al (1989, MWR)
       esi=611.2 * EXP( 21.8745584 * ( T  - 273.15 ) / ( T  - 7.66 ) )

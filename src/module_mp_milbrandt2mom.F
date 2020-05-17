@@ -3557,9 +3557,8 @@ END MODULE my2_mod
 
 
       SUBROUTINE mp_milbrandt2mom_driver(qv, qc, qr, qi, qs, qg, qh, nc, nr, ni, ns, ng,  &
-                              nh, th, pii, p, w, dz, dt_in, itimestep, p8w,               & 
-                              RAINNC, RAINNCV, SNOWNC, SNOWNCV, GRPLNC, GRPLNCV,          &
-                              HAILNC, HAILNCV, SR, Zet,                                   &
+                              nh, th, pii, p, psfc, w, dz, dt_in, itimestep,              & 
+                              RAINNC, RAINNCV, SR, Zet,                                   &
                               ids,ide, jds,jde, kds,kde,                                  &  ! domain dims
                               ims,ime, jms,jme, kms,kme,                                  &  ! memory dims
                               its,ite, jts,jte, kts,kte)                                     ! tile dims
@@ -3570,21 +3569,25 @@ END MODULE my2_mod
       integer, intent(in):: ids,ide, jds,jde, kds,kde,                                   &
                             ims,ime, jms,jme, kms,kme,                                   &
                             its,ite, jts,jte, kts,kte
-      real, dimension(ims:ime, kms:kme, jms:jme), intent(inout)::                        &
+      real, dimension(ims:ime, jms:jme, kms:kme), intent(inout)::                        &
                             qv,qc,qr,qi,qs,qg,qh,nc,nr,ni,ns,ng,nh,th,Zet
-      real, dimension(ims:ime, kms:kme, jms:jme), intent(in)::                           &
-                            pii,p,w,dz
-      real, dimension(ims:ime, kms:kme, jms:jme), intent(in):: p8w                                  
+      real, dimension(ims:ime, jms:jme, kms:kme), intent(in)::                           &
+                            pii,p,dz,w
       real, dimension(ims:ime, jms:jme), intent(inout)::                                 &
-                            RAINNC,RAINNCV,SNOWNC,SNOWNCV,GRPLNC,GRPLNCV,HAILNC,HAILNCV, &
-                            SR
+                            RAINNC,RAINNCV,SR
+      real, dimension(ims:ime, jms:jme), intent(in)::                                    &
+                            psfc
       real, intent(in)::    dt_in
       integer, intent(in):: itimestep !, ccntype
 
  !Local variables:
-      real, dimension(1:ite-its+1,1:kte-kts+1) :: t2d,p2d,sigma2d
+      real, dimension(1:ite-its+1,1:kte-kts+1) :: t2d,p2d,sigma2d,w2d,qv2d,Zet2d, &
+                                                  qc2d,qr2d,qi2d,qs2d,qg2d,qh2d,  &
+                                                  nc2d,nr2d,ni2d,ns2d,ng2d,nh2d
 
      !tentatively local; to be passed out as output variables later
+      real, dimension(ims:ime,jms:jme)              :: SNOWNCV,HAILNCV,GRPLNCV, &
+                                                       SNOWNC,HAILNC,GRPLNC
       real, dimension(1:ite-its+1,1:kte-kts+1)      :: Dm_c,Dm_r,Dm_i,Dm_s,Dm_g,Dm_h
       real, dimension(1:ite-its+1,1:kte-kts+1,1:20) :: SS
       !note: 20 is temporarily hardcoded; eventually should allocate size with parameter
@@ -3592,7 +3595,6 @@ END MODULE my2_mod
 
       real, dimension(1:ite-its+1) :: rt_rn1,rt_rn2,rt_fr1,rt_fr2,rt_sn1,rt_sn2,rt_sn3,  &
             rt_pe1,rt_pe2,rt_peL,rt_snd,ZEC,p_sfc
-      real, dimension(ims:ime, kms:kme, jms:jme) :: t3d
 
       real    :: dt,ms2mmstp
       integer :: i,j,k,i2d,k2d,i2d_max,k2d_max
@@ -3622,83 +3624,57 @@ END MODULE my2_mod
       snow_ON       = .true.
    !---
 
-      RAINNCV(its:ite,jts:jte) = 0.
-      SNOWNCV(its:ite,jts:jte) = 0.
-      GRPLNCV(its:ite,jts:jte) = 0.
-      HAILNCV(its:ite,jts:jte) = 0.
-      SR(its:ite,jts:jte)      = 0.
-
-      !--run-time stats:
-!       if (mod(itimestep*dt,statfreq)==0.) then
-!           t3d = th*pii
-!           print*, 'Bloc Stats -- BEFORE micro call (my-2.25.1_b11)'
-!           write(6,'(a8,7e15.5)') 'Max qx: ',maxval(qc(its:ite,kts:kte,jts:jte)),maxval(qr(its:ite,kts:kte,jts:jte)),maxval(qi(its:ite,kts:kte,jts:jte)), &
-!                                             maxval(qs(its:ite,kts:kte,jts:jte)),maxval(qg(its:ite,kts:kte,jts:jte)),maxval(qh(its:ite,kts:kte,jts:jte))
-!           write(6,'(a8,6e15.5)') 'Max Nx: ',maxval(nc(its:ite,kts:kte,jts:jte)),maxval(nr(its:ite,kts:kte,jts:jte)),maxval(ni(its:ite,kts:kte,jts:jte)), &
-!                                             maxval(ns(its:ite,kts:kte,jts:jte)),maxval(ng(its:ite,kts:kte,jts:jte)),maxval(nh(its:ite,kts:kte,jts:jte))
-!           write(6,'(a8,7e15.5)') 'Min qx: ',minval(qc(its:ite,kts:kte,jts:jte)),minval(qr(its:ite,kts:kte,jts:jte)),minval(qi(its:ite,kts:kte,jts:jte)), &
-!                                             minval(qs(its:ite,kts:kte,jts:jte)),minval(qg(its:ite,kts:kte,jts:jte)),minval(qh(its:ite,kts:kte,jts:jte))
-!           write(6,'(a8,6e15.5)') 'Min Nx: ',minval(nc(its:ite,kts:kte,jts:jte)),minval(nr(its:ite,kts:kte,jts:jte)),minval(ni(its:ite,kts:kte,jts:jte)), &
-!                                             minval(ns(its:ite,kts:kte,jts:jte)),minval(ng(its:ite,kts:kte,jts:jte)),minval(nh(its:ite,kts:kte,jts:jte))
-!           write(6,'(a8,6e15.5)') 'W,T,qv: ',minval( w(its:ite,kts:kte,jts:jte)),maxval( w(its:ite,kts:kte,jts:jte)),minval(t3d(its:ite,kts:kte,jts:jte)),&
-!                                             maxval(t3d(its:ite,kts:kte,jts:jte)),minval(qv(its:ite,kts:kte,jts:jte)),maxval(qv(its:ite,kts:kte,jts:jte))
-!       endif
-      
       do j = jts, jte
+        do k = kts, kte
+        do i = its, ite
+          p2d(i,k) = p(i,j,k)
+          t2d(i,k) = th(i,j,k)*pii(i,j,k)
+          w2d(i,k) = w(i,j,k)
+          qv2d(i,k) = qv(i,j,k)
+          qc2d(i,k) = qc(i,j,k); nc2d(i,k) = nc(i,j,k)
+          qr2d(i,k) = qr(i,j,k); nr2d(i,k) = nr(i,j,k)
+          qi2d(i,k) = qi(i,j,k); ni2d(i,k) = ni(i,j,k)
+          qs2d(i,k) = qs(i,j,k); ns2d(i,k) = ns(i,j,k)
+          qg2d(i,k) = qg(i,j,k); ng2d(i,k) = ng(i,j,k)
+          qh2d(i,k) = qh(i,j,k); nh2d(i,k) = nh(i,j,k)
+          p_sfc(i) = psfc(i,j)
+          sigma2d(i,k) = p2d(i,k)/p_sfc(i)
+          RAINNCV(i,j) = 0.
+          SR(i,j)      = 0.
+        enddo
+        enddo
 
-         t2d(:,:) = th(its:ite,kts:kte,j)*pii(its:ite,kts:kte,j)
-         p2d(:,:) = p(its:ite,kts:kte,j)
-      !   p_sfc(:) = p2d(:,k2d_max)
-         p_sfc(:) = p8w(its:ite,kms, j)  
-
-         do i = its, ite
-            i2d = i-its+1
-            sigma2d(i2d,:) = p2d(i2d,:)/p_sfc(i2d)
-         enddo
-         call mp_milbrandt2mom_main(w(its:ite,kts:kte,j),t2d,qv(its:ite,kts:kte,j), &
-               qc(its:ite,kts:kte,j),qr(its:ite,kts:kte,j),qi(its:ite,kts:kte,j),   &
-               qs(its:ite,kts:kte,j),qg(its:ite,kts:kte,j),qh(its:ite,kts:kte,j),   &
-               nc(its:ite,kts:kte,j),nr(its:ite,kts:kte,j),ni(its:ite,kts:kte,j),   &
-               ns(its:ite,kts:kte,j),ng(its:ite,kts:kte,j),nh(its:ite,kts:kte,j),   &
-               p_sfc,sigma2d,rt_rn1,rt_rn2,rt_fr1,rt_fr2,rt_sn1,rt_sn2,rt_sn3,      &
-               rt_pe1,rt_pe2,rt_peL,rt_snd,dt,i2d_max,k2d_max,j,itimestep,CCNtype,  &
-               precipDiag_ON,sedi_ON,warmphase_ON,autoconv_ON,icephase_ON,snow_ON,  &
-               Dm_c,Dm_r,Dm_i,Dm_s,Dm_g,Dm_h,Zet(its:ite,kts:kte,j),ZEC,SS,nk_BOTTOM)
-
-         th(its:ite,kts:kte,j) = t2d(:,:)/pii(its:ite,kts:kte,j)
-
-         !Convert individual precipitation rates (in m/s) to WRF precipitation fields (mm/step):
-         RAINNCV(its:ite,j) = ( rt_rn1(:)+rt_rn2(:)+rt_fr1(:)+rt_fr2(:)+rt_sn1(:)+rt_sn2(:)+ &
-                                rt_sn3(:)+rt_pe1(:)+rt_pe2(:) )*ms2mmstp
-         SNOWNCV(its:ite,j) = (rt_sn1(:) + rt_sn2(:))*ms2mmstp
-         HAILNCV(its:ite,j) = (rt_pe1(:) + rt_pe2(:))*ms2mmstp
-         GRPLNCV(its:ite,j) = rt_sn3(:)*ms2mmstp
-
-         RAINNC(its:ite,j)  = RAINNC(its:ite,j) + RAINNCV(its:ite,j)
-         SNOWNC(its:ite,j)  = SNOWNC(its:ite,j) + SNOWNCV(its:ite,j)
-         HAILNC(its:ite,j)  = HAILNC(its:ite,j) + HAILNCV(its:ite,j)
-         GRPLNC(its:ite,j)  = GRPLNC(its:ite,j) + GRPLNCV(its:ite,j)
-         SR(its:ite,j)      = (SNOWNCV(its:ite,j)+HAILNCV(its:ite,j)+GRPLNCV(its:ite,j))/(RAINNCV(its:ite,j)+1.e-12)
-
-
+        call mp_milbrandt2mom_main(w2d,t2d,qv2d,                                   &
+              qc2d,qr2d,qi2d,qs2d,qg2d,qh2d,nc2d,nr2d,ni2d,ns2d,ng2d,nh2d,         &
+              p_sfc,sigma2d,rt_rn1,rt_rn2,rt_fr1,rt_fr2,rt_sn1,rt_sn2,rt_sn3,      &
+              rt_pe1,rt_pe2,rt_peL,rt_snd,dt,i2d_max,k2d_max,j,itimestep,CCNtype,  &
+              precipDiag_ON,sedi_ON,warmphase_ON,autoconv_ON,icephase_ON,snow_ON,  &
+              Dm_c,Dm_r,Dm_i,Dm_s,Dm_g,Dm_h,Zet2d,ZEC,SS,nk_BOTTOM)
+        do k = kts, kte
+        do i = its, ite
+          th(i,j,k) = t2d(i,k)/pii(i,j,k)
+          qv(i,j,k) = qv2d(i,k)
+          qc(i,j,k) = qc2d(i,k); nc(i,j,k) = nc2d(i,k)
+          qr(i,j,k) = qr2d(i,k); nr(i,j,k) = nr2d(i,k)
+          qi(i,j,k) = qi2d(i,k); ni(i,j,k) = ni2d(i,k)
+          qs(i,j,k) = qs2d(i,k); ns(i,j,k) = ns2d(i,k)
+          qg(i,j,k) = qg2d(i,k); ng(i,j,k) = ng2d(i,k)
+          qh(i,j,k) = qh2d(i,k); nh(i,j,k) = nh2d(i,k)
+          Zet(i,j,k) = Zet2d(i,k)
+        enddo
+        enddo
+        do i = its, ite
+          RAINNCV(i,j) = (rt_rn1(i)+rt_rn2(i)+rt_fr1(i)+rt_fr2(i)+rt_sn1(i)+rt_sn2(i)+rt_sn3(i)+rt_pe1(i)+rt_pe2(i))*ms2mmstp
+          SNOWNCV(i,j) = (rt_sn1(i)+rt_sn2(i))*ms2mmstp
+          HAILNCV(i,j) = (rt_pe1(i)+rt_pe2(i))*ms2mmstp
+          GRPLNCV(i,j) = rt_sn3(i)*ms2mmstp
+          RAINNC(i,j)  = RAINNC(i,j)+RAINNCV(i,j)
+          SNOWNC(i,j)  = SNOWNC(i,j)+SNOWNCV(i,j)
+          HAILNC(i,j)  = HAILNC(i,j)+HAILNCV(i,j)
+          GRPLNC(i,j)  = GRPLNC(i,j)+GRPLNCV(i,j)
+          SR(i,j)      = (SNOWNCV(i,j)+HAILNCV(i,j)+GRPLNCV(i,j))/(RAINNCV(i,j)+1.e-12)
+        enddo
       enddo !j_loop
-
-      !--run-time stats:
-!       if (mod(itimestep*dt,statfreq)==0.) then
-!          t3d = th*pii
-!          print*, 'Bloc Stats -- AFTER micro call; my_2.25.1-b11)'
-!          write(6,'(a8,7e15.5)') 'Max qx: ',maxval(qc(its:ite,kts:kte,jts:jte)),maxval(qr(its:ite,kts:kte,jts:jte)),maxval(qi(its:ite,kts:kte,jts:jte)), &
-!                                            maxval(qs(its:ite,kts:kte,jts:jte)),maxval(qg(its:ite,kts:kte,jts:jte)),maxval(qh(its:ite,kts:kte,jts:jte))
-!          write(6,'(a8,6e15.5)') 'Max Nx: ',maxval(nc(its:ite,kts:kte,jts:jte)),maxval(nr(its:ite,kts:kte,jts:jte)),maxval(ni(its:ite,kts:kte,jts:jte)), &
-!                                            maxval(ns(its:ite,kts:kte,jts:jte)),maxval(ng(its:ite,kts:kte,jts:jte)),maxval(nh(its:ite,kts:kte,jts:jte))
-!          write(6,'(a8,7e15.5)') 'Min qx: ',minval(qc(its:ite,kts:kte,jts:jte)),minval(qr(its:ite,kts:kte,jts:jte)),minval(qi(its:ite,kts:kte,jts:jte)), &
-!                                            minval(qs(its:ite,kts:kte,jts:jte)),minval(qg(its:ite,kts:kte,jts:jte)),minval(qh(its:ite,kts:kte,jts:jte))
-!          write(6,'(a8,6e15.5)') 'Min Nx: ',minval(nc(its:ite,kts:kte,jts:jte)),minval(nr(its:ite,kts:kte,jts:jte)),minval(ni(its:ite,kts:kte,jts:jte)), &
-!                                            minval(ns(its:ite,kts:kte,jts:jte)),minval(ng(its:ite,kts:kte,jts:jte)),minval(nh(its:ite,kts:kte,jts:jte))
-!          write(6,'(a8,6e15.5)') 'W,T,qv: ',minval( w(its:ite,kts:kte,jts:jte)),maxval( w(its:ite,kts:kte,jts:jte)),minval(t3d(its:ite,kts:kte,jts:jte)),&
-!                                            maxval(t3d(its:ite,kts:kte,jts:jte)),minval(qv(its:ite,kts:kte,jts:jte)),maxval(qv(its:ite,kts:kte,jts:jte))
-!          write(6,'(a8,2e15.5)') 'Zet   : ',maxval(Zet(its:ite,kts:kte,jts:jte))
-!       endif
 
       END SUBROUTINE mp_milbrandt2mom_driver
 

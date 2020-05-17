@@ -62,7 +62,7 @@
       double precision, intent(in) :: mtime,stattim,taptim,rsttim,radtim,prcltim
       double precision, intent(inout), dimension(nbudget) :: qbudget
       double precision, intent(inout), dimension(numq) :: asq,bsq
-      character(len=3), intent(in), dimension(maxq) :: qname
+      character(len=4), intent(in), dimension(maxq) :: qname
       real, intent(in), dimension(1-ngxy:nx+ngxy+1) :: xfref
       real, intent(in), dimension(1-ngxy:ny+ngxy+1) :: yfref
       real, intent(in), dimension(kb:ke) :: sigma
@@ -697,7 +697,7 @@
     IF(imoist.eq.1)THEN
     do n=1,numq
       text1 = '        '
-      write(text1(1:3),156) qname(n)
+      write(text1(1:4),156) qname(n)
 156   format(a3)
       call writer(ni,nj,1,nk,nx,ny,qa(ib,jb,1,n),text1     ,       &
                   ni,nj,ngxy,myid,numprocs,nodex,nodey,orecs,51,   &
@@ -1664,7 +1664,7 @@
       double precision, intent(inout) :: mtime,stattim,taptim,rsttim,radtim,prcltim
       double precision, intent(inout), dimension(nbudget) :: qbudget
       double precision, intent(inout), dimension(numq) :: asq,bsq
-      character(len=3), intent(in), dimension(maxq) :: qname
+      character(len=4), intent(in), dimension(maxq) :: qname
       real, intent(in), dimension(1-ngxy:nx+ngxy+1) :: xfref
       real, intent(in), dimension(1-ngxy:ny+ngxy+1) :: yfref
       real, intent(in), dimension(kb:ke) :: sigma
@@ -2335,7 +2335,7 @@
     IF(imoist.eq.1)THEN
     do n=1,numq
       text1 = '        '
-      write(text1(1:3),156) qname(n)
+      write(text1(1:4),156) qname(n)
 156   format(a3)
       call  readr(ni,nj,1,nk,nx,ny,qa(ib,jb,1,n),text1     ,       &
                   ni,nj,ngxy,myid,numprocs,nodex,nodey,orecs,51,   &

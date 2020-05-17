@@ -1,13 +1,9 @@
-#if ( (defined(wrfmodel) ) && ( RWORDSIZE == 4 ) ) || ( ( defined(mpas) ) && defined(SINGLE_PRECISION) )
 #  define VREC vsrec
 #  define VSQRT vssqrt
-#else
-#  define VREC vrec
-#  define VSQRT vsqrt
-#endif
 
 MODULE module_mp_wsm6
 !
+   USE input
    USE module_mp_radar
 !
    REAL, PARAMETER, PRIVATE :: dtcldcr     = 120. ! maximum time step for minor loops
@@ -236,6 +232,7 @@ CONTAINS
                do k = kts, kte
                   refl_10cm(i,j,k) = MAX(-35., dBZ(k))
                enddo
+               if(timestats.ge.1) time_dbz=time_dbz+mytime()
             ENDDO
          endif
          ENDIF

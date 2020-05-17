@@ -8,10 +8,10 @@
 #              (NOTE: Don't change lines 3 and 4!)
 #  Note:  you may need to remove -DNCFPLUS if you use an old version of netcdf
 #
-OUTPUTINC = -I/home/Antho/netCDF4.1.3/include
-OUTPUTLIB = -L/home/Antho/netCDF4.1.3/lib
-OUTPUTOPT = -DNETCDF
-LINKOPTS  = -lnetcdf -lnetcdff
+#OUTPUTINC = -I$(NETCDF)/include
+#OUTPUTLIB = -L$(NETCDF)/lib
+#OUTPUTOPT = -DNETCDF -DNCFPLUS
+#LINKOPTS  = -lnetcdf -lnetcdff
 #-----------------------------------------------------------------------------
 
 
@@ -23,58 +23,58 @@ LINKOPTS  = -lnetcdf -lnetcdff
 #  single processor, Intel compiler 
 #      (eg, NCAR's yellowstone/caldera/cheyenne)
 #FC   = ifort
-#OPTS = -O3 -xHost -ip -assume byterecl -fp-model precise -ftz -no-fma
+#OPTS = -O3 -xHost -ip -assume byterecl -fp-model precise -ftz -no-fma -convert big_endian
 #CPP  = cpp -C -P -traditional -Wno-invalid-pp-token -ffreestanding
 #-----------------------------------------------------------------------------
 #  multiple processors, distributed memory (MPI), Intel compiler 
 #      (eg, NCAR's yellowstone/cheyenne)
 #FC   = mpif90
-#OPTS = -O3 -xHost -ip -assume byterecl -fp-model precise -ftz -no-fma
+#OPTS = -O3 -xHost -ip -assume byterecl -fp-model precise -ftz -no-fma -convert big_endian
 #CPP  = cpp -C -P -traditional -Wno-invalid-pp-token -ffreestanding
 #DM   = -DMPI
 #-----------------------------------------------------------------------------
 #  multiple processors, shared memory (OpenMP), Intel compiler 
 #      (eg, NCAR's yellowstone/cheyenne)
 #FC   = mpif90
-#OPTS = -O3 -xHost -ip -assume byterecl -fp-model precise -ftz -no-fma -qopenmp
+#OPTS = -O3 -xHost -ip -assume byterecl -fp-model precise -ftz -no-fma -qopenmp -convert big_endian
 #CPP  = cpp -C -P -traditional -Wno-invalid-pp-token -ffreestanding
 #-----------------------------------------------------------------------------
 #  single processor, Portland Group compiler
 #FC   = pgf90
-#OPTS = -Mfree -O2 -Ktrap=none -Mautoinline -Minline=reshape
+#OPTS = -Mfree -O2 -Ktrap=none -Mautoinline -Minline=reshape -byteswapio
 #CPP  = cpp -C -P -traditional -Wno-invalid-pp-token -ffreestanding
 #-----------------------------------------------------------------------------
 #  multiple processors, distributed memory (MPI), Portland Group compiler
 #FC   = mpif90
-#OPTS = -Mfree -O2 -Ktrap=none -Mautoinline -Minline=reshape
+#OPTS = -Mfree -O2 -Ktrap=none -Mautoinline -Minline=reshape -byteswapio
 #CPP  = cpp -C -P -traditional -Wno-invalid-pp-token -ffreestanding
 #DM   = -DMPI
 #-----------------------------------------------------------------------------
 #  multiple processors, shared memory (OpenMP), Portland Group compiler
 #FC   = pgf90
-#OPTS = -Mfree -O2 -Ktrap=none -Mautoinline -Minline=reshape -mp
+#OPTS = -Mfree -O2 -Ktrap=none -Mautoinline -Minline=reshape -mp -byteswapio
 #CPP  = cpp -C -P -traditional -Wno-invalid-pp-token -ffreestanding
 #-----------------------------------------------------------------------------
 #  single processor, Portland Group compiler, double precision
 #FC   = pgf90
-#OPTS = -Mfree -O2 -Ktrap=none -Mautoinline -Minline=reshape -r8
+#OPTS = -Mfree -O2 -Ktrap=none -Mautoinline -Minline=reshape -r8 -byteswapio
 #CPP  = cpp -C -P -traditional -Wno-invalid-pp-token -ffreestanding
 #DP   = -DDP
 #-----------------------------------------------------------------------------
 #  multiple processors, shared memory (OpenMP), Portland Group compiler, double precision
 #FC   = pgf90
-#OPTS = -Mfree -O2 -Ktrap=none -Mautoinline -Minline=reshape -r8 -mp
+#OPTS = -Mfree -O2 -Ktrap=none -Mautoinline -Minline=reshape -r8 -mp -byteswapio
 #CPP  = cpp -C -P -traditional -Wno-invalid-pp-token -ffreestanding
 #DP   = -DDP
 #-----------------------------------------------------------------------------
 #  single processor, gnu compiler
 #FC   = gfortran
-#OPTS = -ffree-form -ffree-line-length-none -O2 -finline-functions
+#OPTS = -ffree-form -ffree-line-length-none -O2 -finline-functions -fconvert=big-endian
 #CPP  = cpp -C -P -traditional -Wno-invalid-pp-token -ffreestanding
 #-----------------------------------------------------------------------------
 #  multiple processors, distributed memory (MPI), gnu compiler
 #FC = mpif90
-#OPTS = -ffree-form -ffree-line-length-none -O2 -finline-functions
+#OPTS = -ffree-form -ffree-line-length-none -O2 -finline-functions -fconvert=big-endian
 #CPP  = cpp -C -P -traditional -Wno-invalid-pp-token -ffreestanding
 #DM = -DMPI
 #-----------------------------------------------------------------------------
@@ -83,7 +83,7 @@ LINKOPTS  = -lnetcdf -lnetcdff
 #  Remember to enter this on command line first:  module load libfast
 #      (or, comment-out the "-lfast_mv" line below)
 #FC   = ftn
-#OPTS = -O3 -Ovector3 -Oscalar3 -Othread3 -h noomp
+#OPTS = -O3 -Ovector3 -Oscalar3 -Othread3 -h noomp -h byteswapio
 #LINKOPTS = -lfast_mv
 #CPP  = cpp -C -P -traditional
 #-----------------------------------------------------------------------------
@@ -92,7 +92,7 @@ LINKOPTS  = -lnetcdf -lnetcdff
 #  Remember to enter this on command line first:  module load libfast
 #      (or, comment-out the "-lfast_mv" line below)
 #FC   = ftn
-#OPTS = -O3 -Ovector3 -Oscalar3 -Othread3 -h noomp
+#OPTS = -O3 -Ovector3 -Oscalar3 -Othread3 -h noomp -h byteswapio
 #LINKOPTS = -lfast_mv
 #CPP  = cpp -C -P -traditional
 #DM   = -DMPI
@@ -102,22 +102,28 @@ LINKOPTS  = -lnetcdf -lnetcdff
 #  Remember to enter this on command line first:  module load libfast
 #      (or, comment-out the "-lfast_mv" line below)
 #FC   = ftn
-#OPTS = -O3 -Ovector3 -Oscalar3 -Othread3 -h omp
+#OPTS = -O3 -Ovector3 -Oscalar3 -Othread3 -h omp -h byteswapio
 #LINKOPTS = -lfast_mv
 #CPP  = cpp -C -P -traditional
 #DM   = -DMPI
 #-----------------------------------------------------------------------------
-FC    = gfortran
-OPTS  = -ffree-form -ffree-line-length-none -O3 -finline-functions -m64 -fopenmp
-OPTS += -static-libgfortran -static-libgcc 
-OPTS += -Wl,-Bstatic,--whole-archive -lwinpthread -lnetcdf -lnetcdff -lgomp -lquadmath -Wl,--no-whole-archive -Wl,--stack,2147483647
-CPP   = cpp -C -P -traditional -Wno-invalid-pp-token -ffreestanding
+# For compiling release executable on windows
+#OUTPUTINC = -I/home/Antho/netCDF4.1.3/include
+#OUTPUTLIB = -L/home/Antho/netCDF4.1.3/lib
+#OUTPUTOPT = -DNETCDF
+#LINKOPTS  = -lnetcdf -lnetcdff
+#FC    = gfortran
+#OPTS  = -ffree-form -ffree-line-length-none -O3 -finline-functions -fopenmp -fconvert=big-endian
+#OPTS += -static-libgfortran -static-libgcc
+#OPTS += -Wl,-Bstatic,--whole-archive -lwinpthread -lnetcdf -lnetcdff -lgomp -lquadmath -Wl,--no-whole-archive -Wl,--stack,2147483647
+#CPP   = cpp -C -P -traditional -Wno-invalid-pp-token -ffreestanding
 #-----------------------------------------------------------------------------
 #-- You shouldn't need to change anything below here
 #-----------------------------------------------------------------------------
 
 SRC   = constants.F \
 	input.F \
+	libmassv.F \
 	adv.F \
 	adv_routines.F \
 	anelp.F \
@@ -141,7 +147,13 @@ SRC   = constants.F \
 	maxmin.F \
 	misclibs.F \
 	morrison.F \
+	module_mp_fer_hires.F \
+	module_mp_gsfcgce_4ice_nuwrf.F \
+	module_mp_jensen_ishmael.F \
+	module_mp_milbrandt2mom.F \
 	module_mp_nssl_2mom.F \
+	module_mp_p3.F \
+	module_mp_wsm6.F \
 	param.F \
 	parcel.F \
 	pdef.F \
@@ -184,7 +196,10 @@ SRC   = constants.F \
 	module_ra_rrtmg_lw.F \
 	module_ra_rrtmg_sw.F \
 	module_bl_mynn.F \
-	module_sf_mynn.F
+	module_sf_mynn.F \
+	sounding.F \
+	doppler.F \
+	tracker.F
 
 OBJS = $(addsuffix .o, $(basename $(SRC)))
 
@@ -218,9 +233,9 @@ adv.o: constants.o input.o pdef.o adv_routines.o
 adv_routines.o: input.o constants.o pdef.o comm.o
 anelp.o: constants.o input.o misclibs.o bc.o poiss.o
 azimavg.o: input.o constants.o cm1libs.o
-base.o: constants.o input.o bc.o comm.o goddard.o cm1libs.o getcape.o
+base.o: constants.o input.o bc.o comm.o goddard.o cm1libs.o getcape.o sounding.o
 bc.o: constants.o input.o
-cm1.o: constants.o input.o param.o base.o init3d.o misclibs.o solve.o diff2.o turb.o statpack.o writeout.o restart.o radiation_driver.o radtrns3d.o turbdiag.o azimavg.o hifrq.o parcel.o init_physics.o init_surface.o
+cm1.o: constants.o input.o param.o base.o init3d.o misclibs.o solve.o diff2.o turb.o statpack.o writeout.o restart.o radiation_driver.o radtrns3d.o turbdiag.o azimavg.o hifrq.o parcel.o init_physics.o init_surface.o tracker.o
 cm1libs.o: input.o constants.o
 comm.o: input.o bc.o
 diff2.o: constants.o input.o
@@ -236,7 +251,9 @@ kessler.o: constants.o input.o
 lfoice.o: input.o
 maxmin.o: input.o
 misclibs.o: constants.o input.o goddard.o lfoice.o
+module_mp_gsfcgce_4ice_nuwrf.o: input.o module_mp_radar.o
 module_mp_radar.o: module_ra_etc.o
+module_mp_wsm6.o: input.o libmassv.o module_mp_radar.o
 module_ra_rrtmg_lw.o: module_ra_etc.o
 module_ra_rrtmg_sw.o: module_ra_etc.o module_ra_rrtmg_lw.o
 module_gfs_funcphys.o: module_gfs_machine.o module_gfs_physcons.o
@@ -246,7 +263,7 @@ module_bl_gfsedmf.o: module_gfs_funcphys.o module_gfs_machine.o module_gfs_physc
 module_bl_mynn.o: module_ra_etc.o
 module_sf_mynn.o: module_ra_etc.o module_bl_mynn.o
 morrison.o: input.o constants.o
-param.o: constants.o input.o init_terrain.o bc.o comm.o thompson.o morrison.o module_mp_nssl_2mom.o goddard.o lfoice.o
+param.o: constants.o input.o init_terrain.o bc.o comm.o thompson.o morrison.o module_mp_nssl_2mom.o goddard.o lfoice.o module_mp_fer_hires.o module_mp_wsm6.o module_mp_p3.o module_mp_jensen_ishmael.o
 parcel.o: constants.o input.o cm1libs.o bc.o comm.o writeout_nc.o
 pdef.o: input.o bc.o comm.o
 pdcomp.o: constants.o input.o adv.o poiss.o
@@ -255,7 +272,7 @@ radiation_driver.o: constants.o input.o bc.o radtrns3d.o module_ra_etc.o module_
 radtrns3d.o: irrad3d.o sorad3d.o radlib3d.o
 restart.o: constants.o input.o writeout_nc.o
 sfcphys.o: constants.o input.o cm1libs.o
-solve.o: constants.o input.o bc.o comm.o adv.o adv_routines.o diff2.o turb.o sound.o sounde.o soundns.o soundcb.o anelp.o misclibs.o kessler.o thompson.o morrison.o module_mp_nssl_2mom.o goddard.o lfoice.o testcase_simple_phys.o parcel.o pdcomp.o
+solve.o: constants.o input.o bc.o comm.o adv.o adv_routines.o diff2.o turb.o sound.o sounde.o soundns.o soundcb.o anelp.o misclibs.o kessler.o thompson.o morrison.o module_mp_nssl_2mom.o goddard.o lfoice.o module_mp_fer_hires.o module_mp_wsm6.o module_mp_milbrandt2mom.o module_mp_p3.o module_mp_jensen_ishmael.o module_mp_gsfcgce_4ice_nuwrf.o testcase_simple_phys.o parcel.o pdcomp.o
 sorad3d.o: radlib3d.o
 sound.o: constants.o input.o misclibs.o bc.o comm.o
 sounde.o: constants.o input.o misclibs.o bc.o comm.o
@@ -266,5 +283,8 @@ testcase_simple_phys.o: constants.o input.o
 thompson.o: input.o module_mp_radar.o module_ra_etc.o
 turb.o: constants.o input.o bc.o comm.o sfcphys.o sfclay.o sfclayrev.o slab.o oml.o ysu.o cm1libs.o module_sf_gfdl.o module_bl_gfsedmf.o module_sf_mynn.o module_bl_mynn.o
 turbdiag.o: constants.o input.o interp_routines.o cm1libs.o getcape.o sfcphys.o
-writeout.o: constants.o input.o bc.o comm.o writeout_nc.o misclibs.o getcape.o
+writeout.o: constants.o input.o bc.o comm.o writeout_nc.o misclibs.o getcape.o doppler.o
 writeout_nc.o: constants.o input.o
+sounding.o: constants.o input.o
+doppler.o: constants.o input.o
+tracker.o: input.o

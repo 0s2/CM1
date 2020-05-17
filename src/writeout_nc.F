@@ -37,7 +37,7 @@
       real, intent(in) :: rtime
       integer, intent(in) :: nwrite,fnum
       integer, intent(inout) :: ncid,time_index
-      character(len=3), dimension(maxq), intent(in) :: qname
+      character(len=4), dimension(maxq), intent(in) :: qname
       character(len=60), intent(in), dimension(maxvars) :: desc_output
       character(len=40), intent(in), dimension(maxvars) :: name_output,unit_output
       character(len=1),  intent(in), dimension(maxvars) :: grid_output
@@ -631,7 +631,7 @@
     real, intent(in), dimension(ib:ie,jb:je,kb:ke+1) :: zf
     real, intent(in), dimension(kb:ke)   :: sigma
     real, intent(in), dimension(kb:ke+1) :: sigmaf
-    character(len=3), intent(in), dimension(maxq) :: qname
+    character(len=4), intent(in), dimension(maxq) :: qname
     integer, intent(in) :: num_soil_layers,nrad2d
     real, intent(inout), dimension(d2i) :: dumx
     real, intent(inout), dimension(d2j) :: dumy
@@ -976,7 +976,7 @@
     if( imoist.eq.1 )then
       do n=1,numq
         text1 = '        '
-        write(text1(1:3),156) qname(n)
+        write(text1(1:4),156) qname(n)
 156     format(a3)
         call disp_err( nf90_def_var(ncid,text1     ,nf90_float,(/niid,njid,nkid,timeid/),varid) , .true. )
         if( n.eq.nqv )then
@@ -1595,7 +1595,7 @@
       real,    intent(in)    :: rtime
       integer, intent(in)    :: nstat
       real, dimension(stat_out), intent(in) :: rstat
-      character(len=3), dimension(maxq), intent(in) :: qname
+      character(len=4), dimension(maxq), intent(in) :: qname
       character(len=6), dimension(maxq), intent(in) :: budname
       character(len=40), intent(in), dimension(maxvars) :: name_stat,desc_stat,unit_stat
 
@@ -1763,7 +1763,7 @@
 
       integer, intent(inout) :: prec
       real, intent(in) :: rtime
-      character(len=3), intent(in), dimension(maxq) :: qname
+      character(len=4), intent(in), dimension(maxq) :: qname
       character(len=40), intent(in), dimension(maxvars) :: name_prcl,desc_prcl,unit_prcl
       real, intent(in), dimension(nparcels,npvals) :: pdata
       real, intent(inout), dimension(nparcels) :: pdata2

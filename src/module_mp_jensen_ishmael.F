@@ -222,7 +222,7 @@ contains
        IDS,IDE, JDS,JDE, KDS,KDE,                        &
        IMS,IME, JMS,JME, KMS,KME,                        &
        ITS,ITE, JTS,JTE, KTS,KTE,                        &
-       RAINNC, RAINNCV, SNOWNC, SNOWNCV,                 &
+       RAINNC, RAINNCV,                                  &
        diag_effc3d, diag_effi3d, diag_dbz3d,             &
        diag_vmi3d_1, diag_di3d_1, diag_rhopo3d_1, diag_phii3d_1, &
        diag_vmi3d_2, diag_di3d_2, diag_rhopo3d_2, diag_phii3d_2, &
@@ -309,7 +309,7 @@ contains
 
   !.. 2D variables
     real, dimension(ims:ime, jms:jme), intent(inout) ::              &
-         rainnc, rainncv, snownc, snowncv
+         rainnc, rainncv
 
     integer :: I,K,J
     
@@ -342,7 +342,7 @@ contains
     qipre1d(ICE1)=0.
     qipre1d(ICE2)=0.
     qipre1d(ICE3)=0.
-    
+
   !.. Loop over the grid and send each vertical column into the microphysics routine
     do j=jts,jte             !.. j loop (north-south)         
        do i=its,ite          !.. i loop (horizontal)
@@ -443,8 +443,8 @@ contains
 
   !.. Accumulated precipitation and precipitation rates
   !.. Frozen precipitation
-          SNOWNC(i,j) = SNOWNC(i,j) + qipre1d(ICE1) + qipre1d(ICE2) + qipre1d(ICE3)
-          SNOWNCV(i,j) = qipre1d(ICE1) + qipre1d(ICE2) + qipre1d(ICE3)
+!!!          SNOWNC(i,j) = SNOWNC(i,j) + qipre1d(ICE1) + qipre1d(ICE2) + qipre1d(ICE3)
+!!!          SNOWNCV(i,j) = qipre1d(ICE1) + qipre1d(ICE2) + qipre1d(ICE3)
 
   !.. Total precipitation         
           RAINNC(i,j) = RAINNC(i,j) + qrpre1d + qipre1d(ICE1) + qipre1d(ICE2) + qipre1d(ICE3)

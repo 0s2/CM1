@@ -72,7 +72,7 @@
     double precision, intent(in) :: mtime
     integer, intent(in) :: nwritet
     integer, intent(inout) :: trecs,trecw
-    character(len=3), intent(in), dimension(maxq) :: qname
+    character(len=4), intent(in), dimension(maxq) :: qname
     character(len=20), intent(in), dimension(maxq) :: qunit
     real, intent(inout) :: dt
     logical, intent(in) :: dosfcflx

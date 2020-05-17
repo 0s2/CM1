@@ -56,7 +56,7 @@
       double precision :: avgsfcu,avgsfcv,avgsfcs,avgsfct
       logical :: dosfcflx
       logical, dimension(maxq) :: cloudvar,rhovar
-      character(len=3), dimension(maxq) :: qname
+      character(len=4), dimension(maxq) :: qname
       character(len=20), dimension(maxq) :: qunit
       character(len=6), dimension(maxq) :: budname
       character(len=60), dimension(maxvars) :: desc_output
@@ -180,8 +180,15 @@
       ! diagnostic arrays:
       real, dimension(:,:,:,:), allocatable :: tdiag,qdiag,udiag,vdiag,wdiag,kdiag,pdiag
 
+      ! arrays for new microphysics:
+      real, dimension(:,:,:),   allocatable :: qv_old,th_old
+      real, dimension(:,:,:,:), allocatable :: vmi3d,di3d,rhopo3d,phii3d
+      real, dimension(:,:,:),   allocatable :: physc,physe,physd,physs,physm,physf
+      real, dimension(:,:,:),   allocatable :: acphysc,acphyse,acphysd,acphyss,acphysm,acphysf
+      real, dimension(:,:,:),   allocatable :: preci3d,precs3d,precg3d,prech3d,precr3d
+      real, dimension(:,:,:),   allocatable :: phys_tot,acphys_tot
       ! miscellaneous output:
-      real, dimension(:,:,:),   allocatable :: out2d
+      real, dimension(:,:,:),   allocatable :: out2d,velocity
       real, dimension(:,:,:,:), allocatable :: out3d
 
       logical :: dorestart,dowriteout,dostat,doprclout,dotdwrite,doazimwrite,dohifrqwrite
@@ -1096,6 +1103,9 @@
       allocate( wten1(ib:ie,jb:je,kb:ke+1) )
       wten1 = 0.0
 
+      allocate( velocity(ib:ie,jb:je,kb:ke) )
+      velocity = 0.0
+
       allocate(   ppi(ib:ie,jb:je,kb:ke) )
       ppi = 0.0
       allocate(  pp3d(ib:ie,jb:je,kb:ke) )
@@ -1124,6 +1134,8 @@
       thten1 = 0.0
       allocate(thterm(ib:ie,jb:je,kb:ke) )
       thterm = 0.0
+      allocate(th_old(ib:ie,jb:je,kb:ke) )
+      th_old = 0.0
 
       allocate( qpten(ibm:iem,jbm:jem,kbm:kem) )
       qpten = 0.0
@@ -1151,6 +1163,8 @@
       q3d = 0.0
       allocate(   qten(ibm:iem,jbm:jem,kbm:kem,numq) )
       qten = 0.0
+      allocate( qv_old(ib:ie,jb:je,kb:ke) )
+      qv_old = 0.0
 
       allocate(    kmh(ibc:iec,jbc:jec,kbc:kec) )
       kmh = 0.0
@@ -1669,6 +1683,7 @@
         trans = 0.0
       endif
 
+
       if( myid.eq.0 ) print *
       if( myid.eq.0 ) print *,'  allocating diagnostic arrays: '
       if( myid.eq.0 ) print *
@@ -1687,6 +1702,58 @@
       kdiag = 0.0
       allocate( pdiag(ibdp:iedp,jbdp:jedp,kbdp:kedp,npdiag) )
       pdiag = 0.0
+
+
+      allocate( di3d(ib:ie,jb:je,kb:ke,num_cat) )
+      di3d = 0.0
+      allocate( vmi3d(ib:ie,jb:je,kb:ke,num_cat) )
+      vmi3d = 0.0
+      allocate( phii3d(ib:ie,jb:je,kb:ke,num_cat) )
+      phii3d = 0.0
+      allocate( rhopo3d(ib:ie,jb:je,kb:ke,num_cat) )
+      rhopo3d = 0.0
+
+      allocate( physc(ib:ie,jb:je,kb:ke) )
+      physc = 0.0
+      allocate( physe(ib:ie,jb:je,kb:ke) )
+      physe = 0.0
+      allocate( physd(ib:ie,jb:je,kb:ke) )
+      physd = 0.0
+      allocate( physs(ib:ie,jb:je,kb:ke) )
+      physs = 0.0
+      allocate( physm(ib:ie,jb:je,kb:ke) )
+      physm = 0.0
+      allocate( physf(ib:ie,jb:je,kb:ke) )
+      physf = 0.0
+
+      allocate( acphysc(ib:ie,jb:je,kb:ke) )
+      acphysc = 0.0
+      allocate( acphyse(ib:ie,jb:je,kb:ke) )
+      acphyse = 0.0
+      allocate( acphysd(ib:ie,jb:je,kb:ke) )
+      acphysd = 0.0
+      allocate( acphyss(ib:ie,jb:je,kb:ke) )
+      acphyss = 0.0
+      allocate( acphysm(ib:ie,jb:je,kb:ke) )
+      acphysm = 0.0
+      allocate( acphysf(ib:ie,jb:je,kb:ke) )
+      acphysf = 0.0
+
+      allocate( phys_tot(ib:ie,jb:je,kb:ke) )
+      phys_tot = 0.0
+      allocate( acphys_tot(ib:ie,jb:je,kb:ke) )
+      acphys_tot = 0.0
+
+      allocate( preci3d(ib:ie,jb:je,kb:ke) )
+      preci3d = 0.0
+      allocate( precs3d(ib:ie,jb:je,kb:ke) )
+      precs3d = 0.0
+      allocate( precg3d(ib:ie,jb:je,kb:ke) )
+      precg3d = 0.0
+      allocate( prech3d(ib:ie,jb:je,kb:ke) )
+      prech3d = 0.0
+      allocate( precr3d(ib:ie,jb:je,kb:ke) )
+      precr3d = 0.0
 
 !----------------------------------------------------------------------
 
@@ -2117,8 +2184,8 @@
                    v0,rrv,va,v3d,vten,vten1,                          &
                    rrw,wa,w3d,wten,wten1,                             &
                    ppi,pp3d,ppten,sten,sadv,ppx,phi1,phi2,            &
-                   tha,th3d,thten,thten1,thterm,                      &
-                   qpten,qtten,qvten,qcten,qa,q3d,qten,               &
+                   tha,th3d,thten,thten1,thterm,th_old,               &
+                   qpten,qtten,qvten,qcten,qa,q3d,qten,qv_old,        &
                    kmh,kmv,khh,khv,tkea,tke3d,tketen,                 &
                    nm,defv,defh,lenscl,dissten,                       &
                    thpten,qvpten,qcpten,qipten,upten,vpten,qnipten,qncpten,o30,zir,   &
@@ -2151,11 +2218,14 @@
                    tw1,tw2,te1,te2,ts1,ts2,tn1,tn2,                  &
                    dat1,dat2,dat3,reqt,                              &
                    tdiag,qdiag,udiag,vdiag,wdiag,kdiag,pdiag,        &
-                   out2d,out3d,                                      &
+                   out2d,out3d,di3d,vmi3d,phii3d,rhopo3d,            &
+                   physc,physe,physd,physs,physm,physf,phys_tot,acphys_tot, &
+                   acphysc,acphyse,acphysd,acphyss,acphysm,acphysf,  &
+                   preci3d,precs3d,precg3d,prech3d,precr3d,          &
                    dowriteout,dorad,getdbz,getvt,dotdwrite,dotbud,   &
                    doazimwrite,dorestart)
         ! end_solve
-
+!        call autotrans(nstep,2,dt,mtime,zh,u0,ua,u3d,v0,va,v3d,wa,wten)
 
         !--------------------------------
         ! Step model time forward one dt
@@ -2418,7 +2488,7 @@
                         rxh,arh1,arh2,uh,ruh,rxf,arf1,arf2,vh,rvh,mh,rmh,rmf,rr,rf,            &
                         gz,rgz,gzu,gzv,gxu,gyv,dzdx,dzdy,c1,c2,                                &
                         cd,ch,cq,tlh,f2d,prate,dum1,dum2,dum3,dum4,dum5,dum6,dum7,dum8,        &
-                        t11,t12,t13,t22,t23,t33,rho,prs,divx,                                  &
+                        t11,t12,t13,t22,t23,t33,rho,prs,divx,velocity,                         &
                         rru,u3d,uten,uten1,rrv,v3d,vten,vten1,rrw,w3d,wten,pp3d,th3d,phi2,     &
                         sadv,thten,nm,defv,defh,dissten,                                       &
                         thpten,qvpten,qcpten,qipten,upten,vpten,qnipten,qncpten,xkzh,xkzq,xkzm, &

@@ -39,6 +39,7 @@
       use goddard_module, only : T0K,T00K,RT0
       use cm1libs , only : rslf,rsif
       use getcape_module
+      use sounding_module
 #ifdef MPI
       use mpi
 #endif
@@ -522,31 +523,31 @@
       IF( myid.eq.0 )THEN
         ! only processor 0 does this:
 
-        open(unit=40,file='input_sounding',status='old',err=9009)
-
-        ! read surface parameters:
-        read(40,*,err=9008) p_sfc, th_sfc, qv_sfc
-        if(dowr) write(outfile,*) ' p_sfc, th_sfc, qv_sfc = ',p_sfc, th_sfc, qv_sfc
-
-        ! now, read entire sounding until end of file is discovered
-        nsnd=1
-        do k=1,nmax
-          if( isnd.eq.7 )then
+        if(isnd.eq.7)then
+          open(unit=40,file='input_sounding',status='old',err=9009)
+		  
+          ! read surface parameters:
+          read(40,*,err=9008) p_sfc, th_sfc, qv_sfc
+          if(dowr) write(outfile,*) ' p_sfc, th_sfc, qv_sfc = ',p_sfc, th_sfc, qv_sfc
+		  
+          ! now, read entire sounding until end of file is discovered
+          nsnd=1
+          do k=1,nmax
             read(40,*,end=445,err=9008) zsnd(k+1),thsnd(k+1),qvsnd(k+1),usnd(k+1),vsnd(k+1)
-          elseif( isnd.eq.17 )then
-            read(40,*,end=445,err=9008) zsnd(k+1),thsnd(k+1),qvsnd(k+1)
-          else
-            print *,'  23985 '
-            call stopcm1
-          endif
-          ! put qv in g/g
-          qvsnd(k+1) = qvsnd(k+1)/1000.0
-          nsnd=nsnd+1
-        enddo
-445     continue
-        if(dowr) write(outfile,*) '  Found ',nsnd,'  levels (including surface)'
-        if(dowr) write(outfile,*)
-        close(unit=40)
+            ! put qv in g/g
+            qvsnd(k+1) = qvsnd(k+1)/1000.0
+            nsnd=nsnd+1
+          enddo
+445       continue
+          if(dowr) write(outfile,*) '  Found ',nsnd,'  levels (including surface)'
+          if(dowr) write(outfile,*)
+          close(unit=40)
+        elseif(isnd.eq.17)then
+          call sharppy_reader(nsnd,p_sfc,th_sfc,qv_sfc,zsnd,thsnd,qvsnd,usnd,vsnd)
+        else
+          print *,'  23985 '
+          call stopcm1
+        endif
 
         if( nsnd.le.2 )then
           print *
@@ -2100,7 +2101,7 @@
 ! already been retrieved from the input_sounding file
 !--------------------------
 
-    IF(isnd.ne.7)THEN
+    IF(isnd.ne.7 .and. isnd.ne.17)THEN
 
       do k=1,nk
       do j=1,nj

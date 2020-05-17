@@ -59,6 +59,17 @@
 
       real, parameter :: grads_undef  =  -999999.9
 
+
+      !----------------
+      ! stuff for WRF microphysics:
+
+      real, parameter :: psat      = 610.78
+      real, parameter :: xlf       = 3.50E5      ! latent heat of fusion of water at 0^oC (J kg^-1)
+      real, parameter :: rhowater  = 1000.0      ! density of liquid water at 0^oC (kg m^-3)
+      real, parameter :: rhosnow   = 100.0       ! density of snow (kg m^-3)
+      real, parameter :: rhoair0   = 1.28        ! density of dry air at 0^oC and 1000mb pressure (kg m^-3)
+      !----------------
+
   CONTAINS
 
     !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
