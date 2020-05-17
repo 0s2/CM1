@@ -324,6 +324,19 @@
       call MPI_BCAST(viscosity,1,MPI_REAL   ,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(pr_num   ,1,MPI_REAL   ,0,MPI_COMM_WORLD,ierr)
 
+      call MPI_BCAST(cltkopt  ,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(tceltrk  ,1,MPI_REAL   ,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(tcrestr  ,1,MPI_REAL,   0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(grdtrns  ,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(chkdpth  ,1,MPI_REAL   ,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(twindow  ,1,MPI_REAL   ,0,MPI_COMM_WORLD,ierr)
+
+      call MPI_BCAST(radarx   ,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(radary   ,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(rngmin   ,1,MPI_REAL   ,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(rngmax   ,1,MPI_REAL   ,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(thdbz    ,1,MPI_REAL   ,0,MPI_COMM_WORLD,ierr)
+
       call MPI_BCAST(var1     ,1,MPI_REAL   ,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(var2     ,1,MPI_REAL   ,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(var3     ,1,MPI_REAL   ,0,MPI_COMM_WORLD,ierr)
@@ -380,6 +393,8 @@
       call MPI_BCAST(output_vinterp,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(output_w      ,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(output_winterp,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(output_vel    ,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+      call MPI_BCAST(output_omeg   ,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(output_vort   ,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(output_pv     ,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
       call MPI_BCAST(output_uh     ,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
@@ -4226,6 +4241,7 @@
       output_w       = max(0,min(1,output_w))
       output_winterp = max(0,min(1,output_winterp))
       output_vel     = max(0,min(1,output_vel))
+      output_omeg    = max(0,min(1,output_omeg))
       output_vort    = max(0,min(1,output_vort))
       output_pv      = max(0,min(1,output_pv))
       output_uh      = max(0,min(1,output_uh))
@@ -4353,6 +4369,7 @@
       if(dowr) write(outfile,*) 'output_w         =',output_w
       if(dowr) write(outfile,*) 'output_winterp   =',output_winterp
       if(dowr) write(outfile,*) 'output_vel       =',output_vel
+      if(dowr) write(outfile,*) 'output_omeg      =',output_omeg
       if(dowr) write(outfile,*) 'output_vort      =',output_vort
       if(dowr) write(outfile,*) 'output_pv        =',output_pv
       if(dowr) write(outfile,*) 'output_uh        =',output_uh

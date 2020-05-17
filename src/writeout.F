@@ -1005,6 +1005,13 @@
       unit_output(n_out) = 'm/s'
       grid_output(n_out) = 's'     ! s=scalar pts (3d) ; u=u pts (3d) ; v=v pts (3d) ; w=w pts (3d) ; 2=2d scalar pts
     endif
+    if(output_omeg.eq.1)then
+      n_out = n_out + 1
+      name_output(n_out) = 'omeg'
+      desc_output(n_out) = 'omega/vertical velocity'
+      unit_output(n_out) = 'Pa/s'
+      grid_output(n_out) = 's'     ! s=scalar pts (3d) ; u=u pts (3d) ; v=v pts (3d) ; w=w pts (3d) ; 2=2d scalar pts
+    endif
     if(output_vort.eq.1)then
       n_out = n_out + 1
       name_output(n_out) = 'xvort   '
@@ -4151,6 +4158,18 @@
           do j=1,nj
           do i=1,ni
             dum1(i,j,k) = velocity(i,j,k)
+          enddo
+          enddo
+          enddo
+
+        elseif( trim(name_output(n)).eq.'omeg' )then
+
+          !$omp parallel do default(shared)  &
+          !$omp private(i,j,k)
+          do k=1,maxk
+          do j=1,nj
+          do i=1,ni
+            dum1(i,j,k) = (0.5*(wa(i,j,k)+wa(i,j,k+1)))*rho(i,j,k)*g
           enddo
           enddo
           enddo

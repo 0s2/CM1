@@ -107,10 +107,10 @@
               output_qv,output_qvpert,output_q,output_dbz,output_buoyancy,    &
               output_u,output_upert,output_uinterp,                           &
               output_v,output_vpert,output_vinterp,output_w,output_winterp,   &
-              output_vel,output_vort,output_pv,output_uh,output_pblten,       &
-              output_dissten,output_fallvel,output_nm,output_def,             &
-              output_radten,output_cape,output_cin,output_lcl,output_lfc,     &
-              output_pwat,output_lwp,                                         &
+              output_vel,output_omeg,output_vort,output_pv,output_uh,         &
+              output_pblten,output_dissten,output_fallvel,output_nm,          &
+              output_def,output_radten,output_cape,output_cin,output_lcl,     &
+              output_lfc,output_pwat,output_lwp,                              &
               output_thbudget,output_qvbudget,                                &
               output_ubudget,output_vbudget,output_wbudget,output_pdcomp,     &
               prcl_th,prcl_t,prcl_prs,prcl_ptra,prcl_q,prcl_nc,               &
@@ -239,10 +239,10 @@
               output_qv,output_qvpert,output_q,output_dbz,output_buoyancy,    &
               output_u,output_upert,output_uinterp,                           &
               output_v,output_vpert,output_vinterp,output_w,output_winterp,   &
-              output_vel,output_vort,output_pv,output_uh,output_pblten,       &
-              output_dissten,output_fallvel,output_nm,output_def,             &
-              output_radten,output_cape,output_cin,output_lcl,output_lfc,     &
-              output_pwat,output_lwp,                                         &
+              output_vel,output_omeg,output_vort,output_pv,output_uh,         &
+              output_pblten,output_dissten,output_fallvel,output_nm,          &
+              output_def,output_radten,output_cape,output_cin,output_lcl,     &
+              output_lfc,output_pwat,output_lwp,                              &
               output_thbudget,output_qvbudget,                                &
               output_ubudget,output_vbudget,output_wbudget,output_pdcomp
       namelist /param16/                                                      &
