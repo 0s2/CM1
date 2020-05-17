@@ -3472,13 +3472,65 @@
 !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 !-----------------------------------------------------------------------
 
+        ELSEIF(ptype.eq.13)THEN        ! Lin et al
+
+          !------------------------------------------
+
+          iice = 1    ! this means that ptype=13 is an ice scheme
+
+          numq = 6    ! there are 7 q variables
+
+          nqv  = 1    ! qv is the first array
+          nql1 = 2    ! the first liquid variable
+          nql2 = 3    ! the last liquid variable
+          nqs1 = 4    ! the first solid variable
+          nqs2 = 6    ! the last solid variable
+
+          cloudvar(1) = .false.
+          cloudvar(2) = .true.
+          cloudvar(3) = .false.
+          cloudvar(4) = .true.
+          cloudvar(5) = .false.
+          cloudvar(6) = .false.
+
+          qname(1) = 'qv'
+          qname(2) = 'qc'
+          qname(3) = 'qr'
+          qname(4) = 'qi'
+          qname(5) = 'qs'
+          qname(6) = 'qg'
+
+          qunit(1) = 'kg/kg'
+          qunit(2) = 'kg/kg'
+          qunit(3) = 'kg/kg'
+          qunit(4) = 'kg/kg'
+          qunit(5) = 'kg/kg'
+          qunit(6) = 'kg/kg'
+
+          !----- budget stuff below here -----
+
+          nbudget = 0
+
+          budrain = 0
+
+          if(dowr) write(outfile,*)
+          if(dowr) write(outfile,*) ' -------------------------------------------- '
+          if(dowr) write(outfile,*) '  ... using Lin et al microphysics scheme ... '
+          if(dowr) write(outfile,*) '         numq   = ',numq
+          if(dowr) write(outfile,*) ' -------------------------------------------- '
+          if(dowr) write(outfile,*)
+
+!-----------------------------------------------------------------------
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!-----------------------------------------------------------------------
+
         ELSEIF(ptype.eq.14)THEN        ! Goddard 4-Ice
 
           !------------------------------------------
 
-          iice = 1    ! this means that ptype=8 is an ice scheme
+          iice = 1    ! this means that ptype=14 is an ice scheme
 
-          numq = 7    ! there are 6 q variables
+          numq = 7    ! there are 7 q variables
 
           nqv  = 1    ! qv is the first array
           nql1 = 2    ! the first liquid variable

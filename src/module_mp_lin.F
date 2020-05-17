@@ -195,7 +195,7 @@ CONTAINS
 !
       rhoz(k)=rho(i,j,k)
       orhoz(k)=1./rhoz(k)
-      prez(k)=p(i,k,j)
+      prez(k)=p(i,j,k)
       sqrhoz(k)=sqrt(rhoe_s*orhoz(k))
       tothz(k)=pii(i,j,k)
       zz(k)=z(i,j,k)

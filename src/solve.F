@@ -158,6 +158,7 @@
       use module_mp_milbrandt2mom, only : mp_milbrandt2mom_driver
       use module_mp_p3, only : mp_p3_wrapper_wrf, mp_p3_wrapper_wrf_2cat
       use module_mp_jensen_ishmael, only : mp_jensen_ishmael
+      use module_mp_lin, only : lin_et_al
       use module_mp_gsfcgce_4ice_nuwrf, only : gsfcgce_4ice_nuwrf
       use goddard_module, only : goddard,satadj_ice,consat2
       use lfoice_module, only : lfo_ice_drive,lfoice_init
@@ -316,13 +317,13 @@
       real, intent(inout), dimension(ib:ie,jb:je,kb:ke) :: phys_tot,acphys_tot
       real, dimension(ib:ie,jb:je,kb:ke) :: ICE_PHY,RAIN_PHY,RIMEF_PHY
       integer, dimension(ib:ie,jb:je) :: lowlyr
-      real, dimension(ib:ie,jb:je) :: lannndd
+      real, dimension(ib:ie,jb:je) :: lu_flag
 !-----------------------------------------------------------------------
 ! Arrays and variables defined inside solve
 
       integer :: i,j,k,n,nrk,bflag,pdef,diffit,k1
       integer :: has_reqc,has_reqi,has_reqs,do_radar_ref
-
+      real :: SVP1,SVP2,SVP3,SVPT0
       real :: delqv,delpi,delth,delt,fac,epsd,dheat,dz1,xs
       real :: foo1,foo2
       real :: dttmp,rtime,rdt,tem,tem0,tem1,tem2,thrad,prad
@@ -4557,6 +4558,88 @@
 
 !
 !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!ccc   Lin et al. scheme   cccccccccccccccccccccccccccccccccccccccccc
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+        ELSEIF(ptype.eq.13)THEN
+          call pdefq(    0.0,asq(1),ruh,rvh,rmh,rho,q3d(ib,jb,kb,1))
+          call pdefq( qsmall,asq(2),ruh,rvh,rmh,rho,q3d(ib,jb,kb,2))
+          call pdefq( qsmall,asq(3),ruh,rvh,rmh,rho,q3d(ib,jb,kb,3))
+          call pdefq( qsmall,asq(4),ruh,rvh,rmh,rho,q3d(ib,jb,kb,4))
+          call pdefq( qsmall,asq(5),ruh,rvh,rmh,rho,q3d(ib,jb,kb,5))
+          call pdefq( qsmall,asq(6),ruh,rvh,rmh,rho,q3d(ib,jb,kb,6))
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+          do k=1,nk
+          do j=1,nj
+          do i=1,ni
+            dum1(i,j,k) = pi0(i,j,k)+pp3d(i,j,k)
+            dum2(i,j,k) = dz*rmh(i,j,k)
+            dum4(i,j,k) = th0(i,j,k)+th3d(i,j,k)
+            ! store old theta in thten array:
+            thten(i,j,k)=dum4(i,j,k)
+          enddo
+          enddo
+          enddo
+
+          SVP1 = 0.6112
+          SVP2 = 17.67
+          SVP3 = 29.65
+
+          do_radar_ref = 1
+
+          call   lin_et_al(qv=q3d(ib,jb,kb,1), &
+                           ql=q3d(ib,jb,kb,2), &
+                           qr=q3d(ib,jb,kb,3), &
+                           qi=q3d(ib,jb,kb,4), &
+                           qs=q3d(ib,jb,kb,5), &
+                           qg=q3d(ib,jb,kb,6), &
+                  th=dum4, rho=rho, pii=dum1, p=prs,                                &
+                  dt_in=dt,F_QG=.true.,F_QNDROP=.false.,                            &
+                  z=zh, ht=zs, dz8w=dum2,                                           &
+                  grav=g, cp=cp, rair=rd, rvapor=rv,                                &
+                  XLS=xls, XLV=xlv, XLF=xlf, rhowater=rhowater, rhosnow=rhosnow,    &
+                  EP2=eps, SVP1=svp1, SVP2=svp2, SVP3=svp3, SVPT0=to,               &
+                  RAINNC=rain(ib,jb,1), RAINNCV=dum5(ib,jb,1), SR=dum5(ib,jb,2),    &
+                  refl_10cm=qdiag(ibdq,jbdq,kbdq,qd_dbz), diagflag=getdbz, do_radar_ref=do_radar_ref, &
+                  ids=1,  ide=ni+1, jds=1,  jde=nj+1, kds=1,  kde=nk+1,             &
+                  ims=ib, ime=ie,   jms=jb, jme=je,   kms=kb, kme=ke,               &
+                  its=1,  ite=ni,   jts=1,  jte=nj,   kts=1,  kte=nk                )
+          IF(eqtset.eq.2)THEN
+            ! for mass conservation:
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              if( abs(dum4(i,j,k)-thten(i,j,k)).ge.tsmall .or.  &
+                  abs(q3d(i,j,k,nqv)-qten(i,j,k,nqv)).ge.qsmall )then
+                prs(i,j,k) = rho(i,j,k)*rd*dum4(i,j,k)*dum1(i,j,k)*(1.0+q3d(i,j,k,nqv)*reps)
+                pp3d(i,j,k) = (prs(i,j,k)*rp00)**rovcp - pi0(i,j,k)
+                th3d(i,j,k) = dum4(i,j,k)*dum1(i,j,k)/(pi0(i,j,k)+pp3d(i,j,k)) - th0(i,j,k)
+              endif
+            enddo
+            enddo
+            enddo
+          ELSE
+            ! traditional thermodynamics:  p,pi remain unchanged
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+            do k=1,nk
+            do j=1,nj
+            do i=1,ni
+              if( abs(dum4(i,j,k)-thten(i,j,k)).ge.tsmall .or.  &
+                  abs(q3d(i,j,k,nqv)-qten(i,j,k,nqv)).ge.qsmall )then
+                th3d(i,j,k)= dum4(i,j,k) - th0(i,j,k)
+                rho(i,j,k)=prs(i,j,k)/(rd*dum4(i,j,k)*dum1(i,j,k)*(1.0+q3d(i,j,k,nqv)*reps))
+              endif
+            enddo
+            enddo
+            enddo
+          ENDIF
+          if(timestats.ge.1) time_microphy=time_microphy+mytime()
+
+!
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 !ccc   GSFCGCE 4ICE scheme   ccccccccccccccccccccccccccccccccccccccccccc
 !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         ELSEIF(ptype.eq.14)THEN
@@ -4581,9 +4664,16 @@
           enddo
           enddo
 
+
           do j=1,nj
           do i=1,ni
-            lannndd(i,j) = 2.0
+            if(xland0.eq.1.0)then
+              lu_flag(i,j) = 1.0
+            elseif(xland0.eq.2.0)then
+              lu_flag(i,j) = 2.0
+            else
+              lu_flag(i,j) = 0.0
+            endif
           enddo
           enddo
 
@@ -4599,7 +4689,7 @@
                   th=dum4, rho=rho, pii=dum1, p=prs, dt_in=dt, z=zh,          &
                   ht=zs, dz8w=dum2, grav=g, w=w3d,                            &
                   rhowater=rhowater, rhosnow=rhosnow,                         &
-                  itimestep=nstep, xland=lannndd, dx=dx,                      &
+                  itimestep=nstep, xland=lu_flag, dx=dx,                      &
                   RAINNC=rain(ib,jb,1), RAINNCV=dum5(ib,jb,1), SR=dum5(ib,jb,2),                       &
                   refl_10cm=qdiag(ibdq,jbdq,kbdq,qd_dbz), diagflag=getdbz, do_radar_ref=do_radar_ref,  &
                   physc=physc, physe=physe, physd=physd, physs=physs, physm=physm, physf=physf,        &
