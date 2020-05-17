@@ -1,7 +1,7 @@
 
  &param0
- nx                    = 60,
- ny                    = 60,
+ nx                    = 100,
+ ny                    = 100,
  nz                    = 40,
  nodex                 = 1,
  nodey                 = 1,
@@ -13,8 +13,8 @@
  /
 
  &param1
- dx                    = 2000.0,
- dy                    = 2000.0,
+ dx                    = 1000.0,
+ dy                    = 1000.0,
  dz                    = 500.0,
  dtl                   = 7.500,
  timax                 = 7200.0,
@@ -53,7 +53,7 @@
  irdamp                = 1,
  hrdamp                = 0,
  psolver               = 3,
- ptype                 = 7,
+ ptype                 = 5,
  ihail                 = 1,
  iautoc                = 1,
  icor                  = 0,
@@ -148,18 +148,18 @@
  /
 
  &param4
- stretch_x             = 0,
+ stretch_x             = 1,
  dx_inner              = 1000.0,
- dx_outer              = 7000.0,
- nos_x_len             = 40000.0,
+ dx_outer              = 2000.0,
+ nos_x_len             = 60000.0,
  tot_x_len             = 120000.0,
  /
 
  &param5
- stretch_y             = 0,
+ stretch_y             = 1,
  dy_inner              = 1000.0,
- dy_outer              = 7000.0,
- nos_y_len             = 40000.0,
+ dy_outer              = 2000.0,
+ nos_y_len             = 60000.0,
  tot_y_len             = 120000.0,
  /
 
@@ -232,18 +232,18 @@
  output_zs             = 0,
  output_zh             = 0,
  output_basestate      = 0,
- output_th             = 1,
+ output_th             = 0,
  output_thpert         = 0,
- output_prs            = 1,
+ output_prs            = 0,
  output_prspert        = 0,
  output_pi             = 0,
  output_pipert         = 0,
- output_rho            = 1,
+ output_rho            = 0,
  output_rhopert        = 0,
  output_tke            = 0,
  output_km             = 0,
  output_kh             = 0,
- output_qv             = 1,
+ output_qv             = 0,
  output_qvpert         = 0,
  output_q              = 1,
  output_dbz            = 1,
@@ -257,7 +257,7 @@
  output_w              = 0,
  output_winterp        = 1,
  output_vel            = 1,
- output_omeg           = 0,
+ output_omeg           = 1,
  output_vort           = 0,
  output_pv             = 0,
  output_uh             = 0,
