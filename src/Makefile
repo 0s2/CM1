@@ -150,6 +150,7 @@ SRC   = constants.F \
 	module_mp_fer_hires.F \
 	module_mp_gsfcgce_4ice_nuwrf.F \
 	module_mp_jensen_ishmael.F \
+	module_mp_lin.F \
 	module_mp_milbrandt2mom.F \
 	module_mp_nssl_2mom.F \
 	module_mp_p3.F \
@@ -252,6 +253,7 @@ lfoice.o: input.o
 maxmin.o: input.o
 misclibs.o: constants.o input.o goddard.o lfoice.o
 module_mp_gsfcgce_4ice_nuwrf.o: input.o module_mp_radar.o
+module_mp_lin.o: module_mp_radar.o
 module_mp_radar.o: module_ra_etc.o
 module_mp_wsm6.o: input.o libmassv.o module_mp_radar.o
 module_ra_rrtmg_lw.o: module_ra_etc.o
@@ -272,7 +274,7 @@ radiation_driver.o: constants.o input.o bc.o radtrns3d.o module_ra_etc.o module_
 radtrns3d.o: irrad3d.o sorad3d.o radlib3d.o
 restart.o: constants.o input.o writeout_nc.o
 sfcphys.o: constants.o input.o cm1libs.o
-solve.o: constants.o input.o bc.o comm.o adv.o adv_routines.o diff2.o turb.o sound.o sounde.o soundns.o soundcb.o anelp.o misclibs.o kessler.o thompson.o morrison.o module_mp_nssl_2mom.o goddard.o lfoice.o module_mp_fer_hires.o module_mp_wsm6.o module_mp_milbrandt2mom.o module_mp_p3.o module_mp_jensen_ishmael.o module_mp_gsfcgce_4ice_nuwrf.o testcase_simple_phys.o parcel.o pdcomp.o
+solve.o: constants.o input.o bc.o comm.o adv.o adv_routines.o diff2.o turb.o sound.o sounde.o soundns.o soundcb.o anelp.o misclibs.o kessler.o module_mp_lin.o thompson.o morrison.o module_mp_nssl_2mom.o goddard.o lfoice.o module_mp_fer_hires.o module_mp_wsm6.o module_mp_milbrandt2mom.o module_mp_p3.o module_mp_jensen_ishmael.o module_mp_gsfcgce_4ice_nuwrf.o testcase_simple_phys.o parcel.o pdcomp.o
 sorad3d.o: radlib3d.o
 sound.o: constants.o input.o misclibs.o bc.o comm.o
 sounde.o: constants.o input.o misclibs.o bc.o comm.o
