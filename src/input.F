@@ -37,7 +37,7 @@
               restart_file_zs,restart_file_zh,restart_file_zf,                &
               restart_file_diags,restart_use_theta,restart_reset_frqtim,      &
               dosub,doturbdiag,doazimavg,dohifrq,dohturb,dovturb,pdcomp,      &
-              use_pbl,use_avg_sfc
+              use_pbl,use_cu,use_avg_sfc,kfeta_trigger,cu_rad_feedback
 
 !-----------------------------------------------------------------------
 
@@ -53,6 +53,7 @@
               ipb,ipe,jpb,jpe,kpb,kpe,                                        &
               ibr,ier,jbr,jer,kbr,ker,nir,njr,nkr,                            &
               ibb,ieb,jbb,jeb,kbb,keb,                                        &
+              ibcu,iecu,jbcu,jecu,kbcu,kecu,                                  &
               ibmynn,iemynn,jbmynn,jemynn,kbmynn,kemynn,                      &
               ibdt,iedt,jbdt,jedt,kbdt,kedt,ntdiag,                           &
               ibdq,iedq,jbdq,jedq,kbdq,kedq,nqdiag,                           &
@@ -124,8 +125,9 @@
               stat_tmass,stat_tmois,stat_qmass,stat_tenerg,stat_mo,stat_tmf,  &
               stat_pcn,stat_qsrc,stat_out,prcl_out,                           &
               radopt,year,month,day,hour,minute,second,jday,                  &
-              isfcflx,sfcmodel,oceanmodel,ipbl,initsfc,lu0,season,            &
-              cecd,pertflx,isftcflx,iz0tlnd,convinit,wnudge,maxk,             &
+              cuopt,ishallow,cu_diag,kf_edrates,maxiens,maxens,maxens2,       &
+              maxens3,ensdim,isfcflx,sfcmodel,oceanmodel,ipbl,initsfc,lu0,    &
+              season,cecd,pertflx,isftcflx,iz0tlnd,convinit,wnudge,maxk,      &
               set_znt,set_flx,set_ust,                                        &
               qd_dbz,qd_vtc,qd_vtr,qd_vts,qd_vtg,qd_vti,                      &
               td_hadv,td_vadv,td_hturb,td_vturb,td_mp,td_rdamp,               &
@@ -161,7 +163,7 @@
            minx,maxx,miny,maxy,maxz,zt,rzt,pmin,                              &
            sfctheta,thec_mb,qt_mb,smeps,tsmall,qsmall,cflmax,ksmax,           &
            var1,var2,var3,var4,var5,var6,var7,var8,var9,var10,                &
-           dtrad,ctrlat,ctrlon,                                               &
+           dtrad,ctrlat,ctrlon,dtcu,                                          &
            tsk0,tmn0,xland0,oml_hml0,oml_gamma,                               &
            dmax,zdeep,lamx,lamy,xcent,ycent,aconv,convtime,                   &
            xc_uforce,xr_uforce,zr_uforce,alpha_uforce,t1_uforce,t2_uforce,    &
@@ -261,6 +263,9 @@
               stat_pcn,stat_qsrc
       namelist /param11/                                                      &
               radopt,dtrad,ctrlat,ctrlon,year,month,day,hour,minute,second
+      namelist /param19/                                                      &
+              cuopt,dtcu,ishallow,cu_diag,kf_edrates,kfeta_trigger,           &
+              cu_rad_feedback,maxiens,maxens,maxens2,maxens3,ensdim
       namelist /param12/                                                      &
               isfcflx,sfcmodel,oceanmodel,initsfc,                            &
               tsk0,tmn0,xland0,lu0,season,                                    &
