@@ -24,6 +24,7 @@
                    kmh,kmv,khh,khv,tkea,tke3d,                       &
                    nm,defv,defh,lenscl,dissten,radsw,radswnet,radlwin, &
                    thpten,qvpten,qcpten,qipten,upten,vpten,qnipten,qncpten, &
+                   thcten,qvcten,qccten,qrcten,qicten,qscten,qgcten,ucten,vcten, &
                    xkzh,xkzq,xkzm,                                   &
                    tsq,qsq,cov,sh3d,el_pbl,qc_bl,cldfra_bl,                  &
                    qWT,qSHEAR,qBUOY,qDISS,dqke,qke_adv,qke,                  &
@@ -64,6 +65,10 @@
       use cm1libs , only : rslf,rsif
       use module_sf_mynn , only : sfclay_mynn
       use module_bl_mynn , only : mynn_bl_driver
+      use module_cu_kfeta , only : kf_eta_cps
+      use module_cu_scalesas , only : cu_scalesas
+      use module_cu_g3, only : g3drv,conv_grell_spread3d
+      use module_cu_ntiedtke , only : cu_ntiedtke
 #ifdef MPI
       use mpi
 #endif
@@ -109,6 +114,7 @@
       real, intent(inout), dimension(ibt:iet,jbt:jet,kbt:ket) :: tkea,tke3d
       real, intent(inout), dimension(ib:ie,jb:je,kb:ke+1) :: nm,defv,defh,lenscl,dissten
       real, intent(inout), dimension(ni,nj) :: radsw,radswnet,radlwin
+      real, intent(inout), dimension(ibcu:iecu,jbcu:jecu,kbcu:kecu) :: thcten,qvcten,qccten,qicten,ucten,vcten
       real, intent(inout), dimension(ibb:ieb,jbb:jeb,kbb:keb) :: thpten,qvpten,qcpten,qipten,upten,vpten,qnipten,qncpten
       real, intent(inout), dimension(ibb:ieb,jbb:jeb,kbb:keb) :: xkzh,xkzq,xkzm
       real, intent(inout), dimension(ibmynn:iemynn,jbmynn:jemynn,kbmynn:kemynn) :: tsq,qsq,cov,sh3d,el_pbl,qc_bl,cldfra_bl, &
