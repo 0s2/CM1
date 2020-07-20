@@ -45,7 +45,7 @@
 #endif
       implicit none
 
-      integer :: nstep,nstep0
+      integer :: nstep,nstep0,stepcu
       integer :: srec,sirec,urec,vrec,wrec,nrec,prec,trecs,trecw,arecs,arecw
       integer :: nrst,nstatout,nwrite,nwritet,nwritea,nwriteh
       integer :: rbufsz,num_soil_layers,ndt
@@ -105,6 +105,8 @@
       real, dimension(:,:,:), allocatable :: kmh,kmv,khh,khv
       real, dimension(:,:,:), allocatable :: tkea,tke3d,tketen
       real, dimension(:,:,:), allocatable :: nm,defv,defh,lenscl,dissten
+      real, dimension(:,:,:), allocatable :: thcten,qvcten,qccten,qipten,upten,vpten
+      real, dimension(:,:), allocatable :: raincv,pratec,ctop,cbot,scalefun,scalefun1,sigmu,sigmu1
       real, dimension(:,:,:), allocatable :: thpten,qvpten,qcpten,qipten,upten,vpten,qnipten,qncpten
       real, dimension(:,:,:), allocatable :: xkzh,xkzq,xkzm
       real, dimension(:,:,:), allocatable :: tsq,qsq,cov,sh3d,el_pbl,qc_bl,cldfra_bl,  &
@@ -200,7 +202,7 @@
       real steptime1,steptime2
       integer :: i,j,k,n,nn,fnum,frec
       real :: sum,tem0,tem
-      logical :: getsfc,getpbl,update_sfc,startup,restarted,restart_prcl,reset
+      logical :: getsfc,getpbl,getcu,update_sfc,startup,restarted,restart_prcl,reset
       logical :: dosolve,dorad,getdbz,getvt,doit,dotbud
 
       integer :: icrs,icenter,jcenter
@@ -1209,6 +1211,36 @@
       allocate( qncpten(ibb:ieb,jbb:jeb,kbb:keb) )
       qncpten = 0.0
 
+      allocate( thcten(ibcu:iecu,jbcu:jecu,kbcu:kecu) )
+      thcten = 0.0
+      allocate( qvcten(ibcu:iecu,jbcu:jecu,kbcu:kecu) )
+      qvcten = 0.0
+      allocate( qccten(ibcu:iecu,jbcu:jecu,kbcu:kecu) )
+      qccten = 0.0
+      allocate( qicten(ibcu:iecu,jbcu:jecu,kbcu:kecu) )
+      qicten = 0.0
+      allocate(  ucten(ibcu:iecu,jbcu:jecu,kbcu:kecu) )
+      ucten = 0.0
+      allocate(  vcten(ibcu:iecu,jbcu:jecu,kbcu:kecu) )
+      vcten = 0.0
+
+      allocate(    raincv(ibcu:iecu,jbcu:jecu) )
+      raincv = 0.0
+      allocate(    pratec(ibcu:iecu,jbcu:jecu) )
+      pratec = 0.0
+      allocate(      ctop(ibcu:iecu,jbcu:jecu) )
+      ctop = 0.0
+      allocate(      cbot(ibcu:iecu,jbcu:jecu) )
+      cbot = 0.0
+      allocate(  scalefun(ibcu:iecu,jbcu:jecu) )
+      scalefun = 0.0
+      allocate( scalefun1(ibcu:iecu,jbcu:jecu) )
+      scalefun1 = 0.0
+      allocate(     sigmu(ibcu:iecu,jbcu:jecu) )
+      sigmu = 0.0
+      allocate(    sigmu1(ibcu:iecu,jbcu:jecu) )
+      sigmu1 = 0.0
+
       allocate(   xkzh(ibb:ieb,jbb:jeb,kbb:keb) )
       xkzh = 0.0
       allocate(   xkzq(ibb:ieb,jbb:jeb,kbb:keb) )
@@ -2001,7 +2033,8 @@
         steptime2 = 0.0
       endif
 
-
+      stepcu = nint(cudt*60.0/dt)
+      stepcu = max(stepcu,1)
       nstep0 = nstep
 
 
@@ -2188,6 +2221,7 @@
                    qpten,qtten,qvten,qcten,qa,q3d,qten,qv_old,        &
                    kmh,kmv,khh,khv,tkea,tke3d,tketen,                 &
                    nm,defv,defh,lenscl,dissten,                       &
+                   thcten,qvcten,qccten,qicten,ucten,vcten,           &
                    thpten,qvpten,qcpten,qipten,upten,vpten,qnipten,qncpten,o30,zir,   &
                    swten,lwten,effc,effi,effs,effr,effg,effis,        &
                    lu_index,kpbl2d,psfc,u10,v10,s10,hfx,qfx,xland,znt,ust,   &
@@ -2290,11 +2324,14 @@
       getpbl = .true.
       if( restarted .and. (ipbl.eq.4.or.ipbl.eq.5) ) getpbl = .false.
 
+      getcu = .true.
+      if( restarted ) getcu = .false.
+
       update_sfc = .true.
       if( startup .or. restarted ) update_sfc = .false.
 
-      call sfc_and_turb(getsfc,getpbl,nstep,dt,dosfcflx,cloudvar,qbudget,   &
-                   avgsfcu,avgsfcv,avgsfcs,avgsfct,                  &
+      call sfc_and_turb(getsfc,getpbl,getcu,nstep,stepcu,dt,dosfcflx, &
+	               cloudvar,qbudget,avgsfcu,avgsfcv,avgsfcs,avgsfct, &
                    xh,rxh,arh1,arh2,uh,ruh,xf,rxf,arf1,arf2,uf,ruf,  &
                    yh,vh,rvh,yf,vf,rvf,                              &
                    rds,sigma,rdsf,sigmaf,zh,mh,rmh,c1,c2,zf,mf,rmf,  &
@@ -2309,6 +2346,8 @@
                    th3d,thten,thten1,thterm,q3d,                     &
                    kmh,kmv,khh,khv,tkea,tke3d,                       &
                    nm,defv,defh,lenscl,dissten,radsw,radswnet,radlwin, &
+                   thcten,qvcten,qccten,qicten,ucten,vcten,          &
+                   raincv,pratec,ctop,cbot,scalefun,scalefun1,sigmu,sigmu1, &
                    thpten,qvpten,qcpten,qipten,upten,vpten,qnipten,qncpten, &
                    xkzh,xkzq,xkzm,                                   &
                    tsq,qsq,cov,sh3d,el_pbl,qc_bl,cldfra_bl,                  &

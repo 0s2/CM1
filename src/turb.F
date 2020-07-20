@@ -7,8 +7,9 @@
 
   CONTAINS
 
-      subroutine sfc_and_turb(getsfc,getpbl,nstep,dt,dosfcflx,cloudvar,qbudget,    &
-                   avgsfcu,avgsfcv,avgsfcs,avgsfct,                  &
+
+      subroutine sfc_and_turb(getsfc,getpbl,getcu,nstep,stepcu,dt,dosfcflx,        &
+                   cloudvar,qbudget,avgsfcu,avgsfcv,avgsfcs,avgsfct, &
                    xh,rxh,arh1,arh2,uh,ruh,xf,rxf,arf1,arf2,uf,ruf,  &
                    yh,vh,rvh,yf,vf,rvf,                              &
                    rds,sigma,rdsf,sigmaf,zh,mh,rmh,c1,c2,zf,mf,rmf,  &
@@ -23,8 +24,9 @@
                    tha ,thten,thten1,thterm,qa ,                     &
                    kmh,kmv,khh,khv,tkea,tke3d,                       &
                    nm,defv,defh,lenscl,dissten,radsw,radswnet,radlwin, &
+                   thcten,qvcten,qccten,qicten,ucten,vcten,          &
+                   raincv,pratec,ctop,cbot,scalefun,scalefun1,sigmu,sigmu1, &
                    thpten,qvpten,qcpten,qipten,upten,vpten,qnipten,qncpten, &
-                   thcten,qvcten,qccten,qrcten,qicten,qscten,qgcten,ucten,vcten, &
                    xkzh,xkzq,xkzm,                                   &
                    tsq,qsq,cov,sh3d,el_pbl,qc_bl,cldfra_bl,                  &
                    qWT,qSHEAR,qBUOY,qDISS,dqke,qke_adv,qke,                  &
@@ -65,9 +67,7 @@
       use cm1libs , only : rslf,rsif
       use module_sf_mynn , only : sfclay_mynn
       use module_bl_mynn , only : mynn_bl_driver
-      use module_cu_kfeta , only : kf_eta_cps
       use module_cu_scalesas , only : cu_scalesas
-      use module_cu_g3, only : g3drv,conv_grell_spread3d
       use module_cu_ntiedtke , only : cu_ntiedtke
 #ifdef MPI
       use mpi
@@ -77,7 +77,7 @@
 !-----------------------------------------------------------------------
 ! Arrays and variables passed into solve
 
-      logical, intent(in) :: getsfc,getpbl
+      logical, intent(in) :: getsfc,getpbl,getcu
       integer, intent(in) :: nstep
       real, intent(inout) :: dt
       logical, intent(in) :: dosfcflx
@@ -114,6 +114,7 @@
       real, intent(inout), dimension(ibt:iet,jbt:jet,kbt:ket) :: tkea,tke3d
       real, intent(inout), dimension(ib:ie,jb:je,kb:ke+1) :: nm,defv,defh,lenscl,dissten
       real, intent(inout), dimension(ni,nj) :: radsw,radswnet,radlwin
+      real, intent(inout), dimension(ibcu:iecu,jbcu:jecu) :: raincv,pratec,ctop,cbot,scalefun,scalefun1,sigmu,sigmu1
       real, intent(inout), dimension(ibcu:iecu,jbcu:jecu,kbcu:kecu) :: thcten,qvcten,qccten,qicten,ucten,vcten
       real, intent(inout), dimension(ibb:ieb,jbb:jeb,kbb:keb) :: thpten,qvpten,qcpten,qipten,upten,vpten,qnipten,qncpten
       real, intent(inout), dimension(ibb:ieb,jbb:jeb,kbb:keb) :: xkzh,xkzq,xkzm
@@ -1569,6 +1570,255 @@
 #ifdef MPI
         call comm_1s_end(upten,pw1,pw2,pe1,pe2,ps1,ps2,pn1,pn2,reqs_s)
         call comm_1s_end(vpten,vw1,vw2,ve1,ve2,vs1,vs2,vn1,vn2,reqs_p)
+#endif
+      endif
+
+    ENDIF
+
+!-------------------------------------------------------------------
+!  other PBL schemes:
+
+    IF( cm1setup.eq.2 .and. ipbl.ge.1 )THEN
+
+    dopbl:  &
+    IF( getpbl )THEN
+
+      !c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c!
+
+      pblopt:  &
+      if( use_pbl )then
+
+        !$omp parallel do default(shared)   &
+        !$omp private(i,j,k)
+        DO k=1,nk
+          ! store qi in dum8:
+          if( nqi.ge.1 )then
+            do j=1,nj
+            do i=1,ni
+              dum8(i,j,k) = qa(i,j,k,nqi)
+            enddo
+            enddo
+          else
+            do j=1,nj
+            do i=1,ni
+              dum8(i,j,k) = 0.0
+            enddo
+            enddo
+          endif
+          IF(output_km.eq.1.or.output_kh.eq.1)THEN
+            do j=1,nj
+            do i=1,ni
+              thten1(i,j,k)=0.0
+              thten(i,j,k)=0.0
+            enddo
+            enddo
+          ENDIF
+        ENDDO
+
+        ! here, ppten stores qc:
+
+        if( nqc.ge.1 )then
+          !$omp parallel do default(shared)   &
+          !$omp private(i,j,k)
+          DO k=1,nk
+          do j=1,nj
+          do i=1,ni
+            ppten(i,j,k) = qa(i,j,k,nqc)
+          enddo
+          enddo
+          ENDDO
+        else
+          !$omp parallel do default(shared)   &
+          !$omp private(i,j,k)
+          DO k=1,nk
+          do j=1,nj
+          do i=1,ni
+            ppten(i,j,k) = 0.0
+          enddo
+          enddo
+          ENDDO
+        endif
+
+
+        !$omp parallel do default(shared)   &
+        !$omp private(i,j,k)
+        do k=1,nk
+        do j=1,nj
+        do i=1,ni
+          thten(i,j,k) = 0.5*(wa(i,j,k)+wa(i,j,k+1))
+        enddo
+        enddo
+        enddo
+
+
+
+        !$omp parallel do default(shared)   &
+        !$omp private(i,j,k)
+        DO j=1,nj
+          do k=1,nk
+          do i=1,ni
+            ! ground-relative winds:
+            dum1(i,j,k)=0.5*(ugr(i,j,k)+ugr(i+1,j,k))
+            dum2(i,j,k)=0.5*(vgr(i,j,k)+vgr(i,j+1,k))
+            dum3(i,j,k)=th0(i,j,k)+tha(i,j,k)
+            dum7(i,j,k)=pi0(i,j,k)+ppi(i,j,k)
+            dum4(i,j,k)=dum3(i,j,k)*dum7(i,j,k)
+          enddo
+          enddo
+          do k=1,nk
+          do i=1,ni
+            dum5(i,j,k) = dz*rmh(i,j,k)
+          enddo
+          enddo
+          do k=2,nk
+          do i=1,ni
+            dum6(i,j,k) = c1(i,j,k)*prs(i,j,k-1)+c2(i,j,k)*prs(i,j,k)
+          enddo
+          enddo
+          ! surface:
+          do i=1,ni
+            dum6(i,j,1) = psfc(i,j)
+          enddo
+          ! top of model:
+          do i=1,ni
+            dum6(i,j,nk+1)= cgt1*prs(i,j,nk)+cgt2*prs(i,j,nk-1)+cgt3*prs(i,j,nk-2)
+          enddo
+        ENDDO
+
+        if( sfcmodel.eq.4 )then
+          do j=1,nj
+          do i=1,ni
+            wspd(i,j) = swspd(i,j)
+          enddo
+          enddo
+        endif
+
+        if( iice.eq.1 )then
+          flag_qi = .true.
+        else
+          flag_qi = .false.
+        endif
+
+      doscalesas:  &
+      if( cuopt.eq.1 )then
+        call  cu_scalesas(                                                          &
+                  DT=dt,ITIMESTEP=nstep,STEPCU=stepcu,                              &
+                  RTHCUTEN=thcten,RQVCUTEN=qvcten,RQCCUTEN=qccten,RQICUTEN=qicten,  &
+                  RUCUTEN=ucten,RVCUTEN=vcten,                                      &
+                  RAINCV=raincv,PRATEC=pratec,HTOP=ctop,HBOT=cbot,                  &
+                  U3D=dum1,V3D=dum2,W=thten,T3D=dum4,QV3D=divx,QC3D=ppten,QI3D=dum8,&
+                  PI3D=dum7,RHO3D=rho,DZ8W=dum5,PCPS=prs,P8W=dum5,XLAND=xland,      &
+                  CU_ACT_FLAG=act,P_QC=nqc,                                         &
+                  MOMMIX=mommix,                                                    &
+                  HPBL2D=hpbl2d, EVAP2D=evap2d, HEAT2D=heat2d,                      &
+                  P_QI=nqi,P_FIRST_SCALAR=1,                                        &
+                  DX2D=dsxy, DY=dy,                                                 &
+                  SCALEFUN=scalefun, SCALEFUN1=scalefun1,                           &
+                  SIGMU=sigmu,SIGMU1=sigmu1,                                        &
+                  ids=1  ,ide=ni+1 , jds= 1 ,jde=nj+1 , kds=1  ,kde=nk+1 ,          &
+                  ims=ib ,ime=ie   , jms=jb ,jme=je   , kms=kb ,kme=ke ,            &
+                  its=1  ,ite=ni   , jts=1  ,jte=nj   , kts=1  ,kte=nk              )
+
+      endif  doscalesas
+
+      !c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c!
+
+      dontiedtke:  &
+      if( cuopt.eq.2 )then
+        call  cu_ntiedtke(                                                          &
+                  dt=dt,itimestep=nstep,stepcu=stepcu,                              &
+                  raincv=raincv,pratec=pratec,qfx=qfx,hfx=hfx,                      &
+                  u3d=dum1,v3d=dum2,w=thten,t3d=dum4,qv3d=divx,qc3d=ppten,qi3d=dum8,&
+                  pi3d=dum7,rho3d=rho,qvften=qten(ib,jb,kb,1),thften=thten1,        &
+                  dz8w=dum5,pcps=prs,p8w=dum6,xland=xland,cu_act_flag=act,dx=dx,    &
+                  ids=1  ,ide=ni+1 , jds= 1 ,jde=nj+1 , kds=1  ,kde=nk+1 ,          &
+                  ims=ib ,ime=ie   , jms=jb ,jme=je   , kms=kb ,kme=ke ,            &
+                  its=1  ,ite=ni   , jts=1  ,jte=nj   , kts=1  ,kte=nk ,            &
+                  rthcuten=thcten,rqvcuten=qvcten,rqccuten=qccten,rqicuten=qicten,  &
+                  rucuten=ucten, rvcuten=vcten                                      )
+      endif  dontiedtke
+
+      !c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c!
+
+        if(timestats.ge.1) time_pbl=time_pbl+mytime()
+
+
+      ysudiss:  &
+      if( ipbl.eq.1 )then
+        ! Dissipative heating from ysu scheme:
+
+        IF( idiss.eq.1 .or. output_dissten.eq.1 )THEN
+          !$omp parallel do default(shared)  &
+          !$omp private(i,j,k)
+          do j=1,nj
+          do i=1,ni
+            ! assume t13,t23 are zero at top of domain:
+            !   dum3 = t13
+            !   dum4 = t23
+            dum3(i,j,nk+1) = 0.0
+            dum4(i,j,nk+1) = 0.0
+          enddo
+          enddo
+          !$omp parallel do default(shared)  &
+          !$omp private(i,j,k,tem1,tem2)
+          do k=nk,2,-1
+          do j=1,nj
+          do i=1,ni
+            tem1 = dz*rmh(i,j,k)
+            tem2 = rdz*mf(i,j,k)
+            ! get stresses from u,v tendencies:
+            dum3(i,j,k) = dum3(i,j,k+1)-upten(i,j,k)*tem1
+            dum4(i,j,k) = dum4(i,j,k+1)-vpten(i,j,k)*tem1
+            ! NOTE:  dissten is defined at w points:
+            dissten(i,j,k) = dissten(i,j,k)                                 &
+                          +( dum3(i,j,k)*( dum1(i,j,k)-dum1(i,j,k-1) )*tem2 &
+                            +dum4(i,j,k)*( dum2(i,j,k)-dum2(i,j,k-1) )*tem2 )
+          enddo
+          enddo
+          enddo
+
+        ENDIF
+
+      endif  ysudiss
+
+        if(timestats.ge.1) time_pbl=time_pbl+mytime()
+      endif  optcu
+
+      !c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c!
+
+    ELSE
+
+      if(dowr) write(outfile,*)
+      if(dowr) write(outfile,*) '  ... skipping cumulus calcs ... '
+      if(dowr) write(outfile,*)
+
+    ENDIF  docu
+
+      if( use_cu )then
+        call bcs(ucten)
+#ifdef MPI
+        call comm_1s_start(ucten,pw1,pw2,pe1,pe2,ps1,ps2,pn1,pn2,reqs_s)
+#endif
+        call bcs(vcten)
+#ifdef MPI
+        call comm_1s_start(vcten,vw1,vw2,ve1,ve2,vs1,vs2,vn1,vn2,reqs_p)
+#endif
+        IF( axisymm.eq.1 )THEN
+          ! cm1r19 bug fix:
+          !$omp parallel do default(shared)   &
+          !$omp private(i,j,k)
+          do k=1,nk
+            ucten(0,1,k) = -ucten(1,1,k)
+            ucten(ni+1,1,k) = ucten(ni,1,k)
+            do i=1,ni
+              vcten(i,0,k) = vcten(i,1,k)
+              vcten(i,2,k) = vcten(i,1,k)
+            enddo
+          enddo
+        ENDIF
+#ifdef MPI
+        call comm_1s_end(ucten,pw1,pw2,pe1,pe2,ps1,ps2,pn1,pn2,reqs_s)
+        call comm_1s_end(vcten,vw1,vw2,ve1,ve2,vs1,vs2,vn1,vn2,reqs_p)
 #endif
       endif
 
