@@ -4575,6 +4575,25 @@
         ker=1
       endif
 
+      if( cuopt.eq.1 .or. cuopt.eq.2 .or. cuopt.eq.3 .or. cuopt.eq.4 )then
+        ! for YSU, GFSEDMF, MYNN boundary-layer schemes:
+        ibcu=ib
+        iecu=ie
+        jbcu=jb
+        jecu=je
+        kbcu=kb
+        kecu=ke
+        use_cu = .true.
+      else
+        ibcu=1
+        iecu=1
+        jbcu=1
+        jecu=1
+        kbcu=1
+        kecu=1
+        use_cu = .false.
+      endif
+
       if( ipbl.eq.1 .or. ipbl.eq.3 .or. ipbl.eq.4 .or. ipbl.eq.5 )then
         ! for YSU, GFSEDMF, MYNN boundary-layer schemes:
         ibb=ib
