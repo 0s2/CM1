@@ -26,6 +26,7 @@
                    nm,defv,defh,lenscl,dissten,radsw,radswnet,radlwin, &
                    thcten,qvcten,qccten,qicten,ucten,vcten,          &
                    raincv,pratec,ctop,cbot,scalefun,scalefun1,sigmu,sigmu1, &
+                   w0avg,udr,ddr,uer,der,cldfra_dp,cldfra_sh,qc_cu,qi_cu,   &
                    thpten,qvpten,qcpten,qipten,upten,vpten,qnipten,qncpten, &
                    xkzh,xkzq,xkzm,                                   &
                    tsq,qsq,cov,sh3d,el_pbl,qc_bl,cldfra_bl,                  &
@@ -67,6 +68,7 @@
       use cm1libs , only : rslf,rsif
       use module_sf_mynn , only : sfclay_mynn
       use module_bl_mynn , only : mynn_bl_driver
+      use module_cu_kfeta , only : kf_eta_cps
       use module_cu_scalesas , only : cu_scalesas
       use module_cu_ntiedtke , only : cu_ntiedtke
 #ifdef MPI
@@ -78,7 +80,7 @@
 ! Arrays and variables passed into solve
 
       logical, intent(in) :: getsfc,getpbl,getcu
-      integer, intent(in) :: nstep
+      integer, intent(in) :: nstep,stepcu
       real, intent(inout) :: dt
       logical, intent(in) :: dosfcflx
       logical, intent(in), dimension(maxq) :: cloudvar
@@ -116,6 +118,7 @@
       real, intent(inout), dimension(ni,nj) :: radsw,radswnet,radlwin
       real, intent(inout), dimension(ibcu:iecu,jbcu:jecu) :: raincv,pratec,ctop,cbot,scalefun,scalefun1,sigmu,sigmu1
       real, intent(inout), dimension(ibcu:iecu,jbcu:jecu,kbcu:kecu) :: thcten,qvcten,qccten,qicten,ucten,vcten
+      real, intent(inout), dimension(ibcu:iecu,jbcu:jecu,kbcu:kecu) :: w0avg,udr,ddr,uer,der,cldfra_dp,cldfra_sh,qc_cu,qi_cu
       real, intent(inout), dimension(ibb:ieb,jbb:jeb,kbb:keb) :: thpten,qvpten,qcpten,qipten,upten,vpten,qnipten,qncpten
       real, intent(inout), dimension(ibb:ieb,jbb:jeb,kbb:keb) :: xkzh,xkzq,xkzm
       real, intent(inout), dimension(ibmynn:iemynn,jbmynn:jemynn,kbmynn:kemynn) :: tsq,qsq,cov,sh3d,el_pbl,qc_bl,cldfra_bl, &
@@ -1578,15 +1581,15 @@
 !-------------------------------------------------------------------
 !  other PBL schemes:
 
-    IF( cm1setup.eq.2 .and. ipbl.ge.1 )THEN
+    IF( cuopt.ge.1 )THEN
 
-    dopbl:  &
-    IF( getpbl )THEN
+    docu:  &
+    IF( getcu )THEN
 
       !c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c!
 
-      pblopt:  &
-      if( use_pbl )then
+      optcu:  &
+      if( use_cu )then
 
         !$omp parallel do default(shared)   &
         !$omp private(i,j,k)
@@ -1605,15 +1608,6 @@
             enddo
             enddo
           endif
-          IF(output_km.eq.1.or.output_kh.eq.1)THEN
-            do j=1,nj
-            do i=1,ni
-              thten1(i,j,k)=0.0
-              thten(i,j,k)=0.0
-            enddo
-            enddo
-          ENDIF
-        ENDDO
 
         ! here, ppten stores qc:
 
@@ -1639,7 +1633,6 @@
           ENDDO
         endif
 
-
         !$omp parallel do default(shared)   &
         !$omp private(i,j,k)
         do k=1,nk
@@ -1649,8 +1642,6 @@
         enddo
         enddo
         enddo
-
-
 
         !$omp parallel do default(shared)   &
         !$omp private(i,j,k)
@@ -1685,22 +1676,32 @@
           enddo
         ENDDO
 
-        if( sfcmodel.eq.4 )then
-          do j=1,nj
-          do i=1,ni
-            wspd(i,j) = swspd(i,j)
-          enddo
-          enddo
-        endif
+      dokfeta:  &
+      if( cuopt.eq.1 )then
+        call  kf_eta_cps(                                                           &
+                  ids=1  ,ide=ni+1 , jds= 1 ,jde=nj+1 , kds=1  ,kde=nk+1 ,          &
+                  ims=ib ,ime=ie   , jms=jb ,jme=je   , kms=kb ,kme=ke ,            &
+                  its=1  ,ite=ni   , jts=1  ,jte=nj   , kts=1  ,kte=nk ,            &
+                  trigger=.false.,                                                  &
+                  DT=dt,KTAU=nstep,DX=dt,CUDT=cudt,ADAPT_STEP_FLAG=.false.,         &
+                  rho=rho,RAINCV=raincv,PRATEC=pratec,NCA=nca,                      &
+                  U=dum1,V=dum2,TH=dum3,T=dum4,W=thten,dz8w=dum5,Pcps=prs,pi=dum7,  &
+                  W0AVG=w0avg,XLV0=xlv,XLV1=xlv1,XLS0=xls,XLS1=xls1,CP=cp,R=rd,G=g, &
+                  EP1=ep1,EP2=ep2,SVP1=svp1,SVP2=svp2,SVP3=svp3,SVPT0=svpt0,        &
+                  STEPCU=stepcu,CU_ACT_FLAG=act,warm_rain=1,CUTOP=ctop,CUBOT=cbot,  &
+                  QV=divx,                                                          &
+                  shall=ishallow,                                                   &
+                  RTHCUTEN=thcten,RQVCUTEN=qvcten,RQCCUTEN=qccten,RQICUTEN=qicten,  &
+                  RQVFTEN=qten(ib,jb,kb,1),                                         &
+                  cldfra_dp_KF=cldfra_dp,cldfra_sh_KF=cldfra_sh,                    &
+                  qc_KF=qc_cu,qi_KF=qi_cu,                                          &
+                  TIMEC_KF=timec,KF_EDRATES=kf_edrates                              )
+      endif  dokfeta
 
-        if( iice.eq.1 )then
-          flag_qi = .true.
-        else
-          flag_qi = .false.
-        endif
+      !c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c!
 
       doscalesas:  &
-      if( cuopt.eq.1 )then
+      if( cuopt.eq.2 )then
         call  cu_scalesas(                                                          &
                   DT=dt,ITIMESTEP=nstep,STEPCU=stepcu,                              &
                   RTHCUTEN=thcten,RQVCUTEN=qvcten,RQCCUTEN=qccten,RQICUTEN=qicten,  &
@@ -1724,12 +1725,12 @@
       !c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c-c!
 
       dontiedtke:  &
-      if( cuopt.eq.2 )then
+      if( cuopt.eq.3 )then
         call  cu_ntiedtke(                                                          &
                   dt=dt,itimestep=nstep,stepcu=stepcu,                              &
                   raincv=raincv,pratec=pratec,qfx=qfx,hfx=hfx,                      &
                   u3d=dum1,v3d=dum2,w=thten,t3d=dum4,qv3d=divx,qc3d=ppten,qi3d=dum8,&
-                  pi3d=dum7,rho3d=rho,qvften=qten(ib,jb,kb,1),thften=thten1,        &
+                  pi3d=dum7,rho3d=rho,qvften=qten(ib,jb,kb,nqv),thften=thten1,      &
                   dz8w=dum5,pcps=prs,p8w=dum6,xland=xland,cu_act_flag=act,dx=dx,    &
                   ids=1  ,ide=ni+1 , jds= 1 ,jde=nj+1 , kds=1  ,kde=nk+1 ,          &
                   ims=ib ,ime=ie   , jms=jb ,jme=je   , kms=kb ,kme=ke ,            &
