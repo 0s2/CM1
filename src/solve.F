@@ -98,6 +98,7 @@
                    qpten,qtten,qvten,qcten,qa,q3d,qten,qv_old,       &
                    kmh,kmv,khh,khv,tkea,tke3d,tketen,                &
                    nm,defv,defh,lenscl,dissten,                      &
+                   thcten,qvcten,qccten,qicten,ucten,vcten,          &
                    thpten,qvpten,qcpten,qipten,upten,vpten,qnipten,qncpten,o30,zir,  &
                    swten,lwten,effc,effi,effs,effr,effg,effis,       &
                    lu_index,kpbl2d,psfc,u10,v10,s10,hfx,qfx,xland,znt,ust,  &
@@ -231,6 +232,7 @@
       real, intent(inout), dimension(ibc:iec,jbc:jec,kbc:kec) :: kmh,kmv,khh,khv
       real, intent(inout), dimension(ibt:iet,jbt:jet,kbt:ket) :: tkea,tke3d,tketen
       real, intent(inout), dimension(ib:ie,jb:je,kb:ke+1) :: nm,defv,defh,lenscl,dissten
+      real, intent(inout), dimension(ibcu:iecu,jbcu:jecu,kbcu:kecu) :: thcten,qvcten,qccten,qicten,ucten,vcten
       real, intent(inout), dimension(ibb:ieb,jbb:jeb,kbb:keb) :: thpten,qvpten,qcpten,qipten,upten,vpten,qnipten,qncpten
       real, intent(inout), dimension(ibr:ier,jbr:jer,kbr:ker) :: o30
       real, intent(inout), dimension(ibr:ier,jbr:jer) :: zir
@@ -647,6 +649,18 @@
         if(timestats.ge.1) time_pbl=time_pbl+mytime()
       endif
 
+      if( use_cu )then
+!$omp parallel do default(shared)   &
+!$omp private(i,j,k)
+        do k=1,nk
+        do j=1,nj
+        do i=1,ni+1
+          uten1(i,j,k) = uten1(i,j,k) + 0.5*( ucten(i-1,j,k)+ ucten(i,j,k))
+        enddo
+        enddo
+        enddo
+      endif
+
 !--------------------------------------------------------------------
 !  V-equation
  
@@ -772,6 +786,18 @@
           enddo
         ENDIF
         if(timestats.ge.1) time_pbl=time_pbl+mytime()
+      endif
+ 
+       if( use_cu )then
+!$omp parallel do default(shared)   &
+!$omp private(i,j,k)
+        do k=1,nk
+        do j=1,nj+1
+        do i=1,ni
+          vten1(i,j,k) = vten1(i,j,k) + 0.5*( vcten(i,j-1,k)+ vcten(i,j,k))
+        enddo
+        enddo
+        enddo
       endif
  
 !--------------------------------------------------------------------
@@ -1264,6 +1290,18 @@
         if(timestats.ge.1) time_pbl=time_pbl+mytime()
       ENDIF
 
+      IF( use_cu )THEN
+!$omp parallel do default(shared)  &
+!$omp private(i,j,k)
+        do k=1,nk
+        do j=1,nj
+        do i=1,ni
+          thten1(i,j,k) = thten1(i,j,k) + thcten(i,j,k)
+        enddo
+        enddo
+        enddo
+      ENDIF
+
       if( dohturb .or. dovturb )then
         ! cm1r18: subtract th0r from theta (as in advection scheme)
         !         (reduces roundoff error)
@@ -1383,6 +1421,19 @@
               endif
               if(timestats.ge.1) time_pbl=time_pbl+mytime()
             endif
+
+            if( use_cu )then
+!$omp parallel do default(shared)   &
+!$omp private(i,j,k)
+              do k=1,nk
+              do j=1,nj
+              do i=1,ni
+                qten(i,j,k,nqv) = qten(i,j,k,nqv) + qvcten(i,j,k)
+              enddo
+              enddo
+              enddo
+            endif
+
 !---------------------------
           ! not qv:
           else
@@ -1448,6 +1499,31 @@
           enddo
         endif
           if(timestats.ge.1) time_pbl=time_pbl+mytime()
+        ENDIF
+
+        IF( use_cu )THEN
+        if(nqc.ge.1)then
+          !$omp parallel do default(shared)   &
+          !$omp private(i,j,k)
+          do k=1,nk
+          do j=1,nj
+          do i=1,ni
+            qten(i,j,k,nqc) = qten(i,j,k,nqc) + qccten(i,j,k)
+          enddo
+          enddo
+          enddo
+        endif
+        if(nqi.ge.1)then
+          !$omp parallel do default(shared)   &
+          !$omp private(i,j,k)
+          do k=1,nk
+          do j=1,nj
+          do i=1,ni
+            qten(i,j,k,nqi) = qten(i,j,k,nqi) + qicten(i,j,k)
+          enddo
+          enddo
+          enddo
+        endif
         ENDIF
       endif  imoist1a
 
