@@ -198,6 +198,9 @@ SRC   = constants.F \
 	module_ra_rrtmg_sw.F \
 	module_bl_mynn.F \
 	module_sf_mynn.F \
+	module_cu_kfeta.F \
+	module_cu_scalesas.F \
+	module_cu_ntiedtke.F \
 	sounding.F \
 	doppler.F \
 	tracker.F
@@ -264,6 +267,8 @@ module_sf_gfdl.o: module_gfs_machine.o module_gfs_physcons.o module_gfs_funcphys
 module_bl_gfsedmf.o: module_gfs_funcphys.o module_gfs_machine.o module_gfs_physcons.o module_sf_gfdl.o
 module_bl_mynn.o: module_ra_etc.o
 module_sf_mynn.o: module_ra_etc.o module_bl_mynn.o
+module_cu_scalesas.o: module_gfs_machine.o module_gfs_physcons.o module_gfs_funcphys.o
+module_cu_ntiedtke.o: module_ra_etc.o
 morrison.o: input.o constants.o
 param.o: constants.o input.o init_terrain.o bc.o comm.o thompson.o morrison.o module_mp_nssl_2mom.o goddard.o lfoice.o module_mp_fer_hires.o module_mp_wsm6.o module_mp_p3.o module_mp_jensen_ishmael.o
 parcel.o: constants.o input.o cm1libs.o bc.o comm.o writeout_nc.o
@@ -283,7 +288,7 @@ soundns.o: constants.o input.o misclibs.o bc.o
 statpack.o: constants.o input.o maxmin.o misclibs.o cm1libs.o writeout_nc.o
 testcase_simple_phys.o: constants.o input.o
 thompson.o: input.o module_mp_radar.o module_ra_etc.o
-turb.o: constants.o input.o bc.o comm.o sfcphys.o sfclay.o sfclayrev.o slab.o oml.o ysu.o cm1libs.o module_sf_gfdl.o module_bl_gfsedmf.o module_sf_mynn.o module_bl_mynn.o
+turb.o: constants.o input.o bc.o comm.o sfcphys.o sfclay.o sfclayrev.o slab.o oml.o ysu.o cm1libs.o module_sf_gfdl.o module_bl_gfsedmf.o module_sf_mynn.o module_bl_mynn.o module_cu_kfeta.o module_cu_scalesas.o module_cu_ntiedtke.o
 turbdiag.o: constants.o input.o interp_routines.o cm1libs.o getcape.o sfcphys.o
 writeout.o: constants.o input.o bc.o comm.o writeout_nc.o misclibs.o getcape.o doppler.o
 writeout_nc.o: constants.o input.o
